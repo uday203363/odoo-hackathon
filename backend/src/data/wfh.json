@@ -1,0 +1,25 @@
+[
+  {
+    "id": "wfh-001",
+    "employeeId": "EMP-102",
+    "employeeName": "Alex Morgan",
+    "employeeAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    "department": "Engineering",
+    "date": "2026-08-22",
+    "reason": "Internet upgrade at office building.",
+    "status": "Approved",
+    "appliedOn": "2026-08-21",
+    "reviewedBy": "Elena Rostova"
+  },
+  {
+    "id": "wfh-002",
+    "employeeId": "EMP-105",
+    "employeeName": "Priya Patel",
+    "employeeAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    "department": "Marketing",
+    "date": "2026-08-25",
+    "reason": "Personal errand in morning.",
+    "status": "Pending",
+    "appliedOn": "2026-08-22"
+  }
+]

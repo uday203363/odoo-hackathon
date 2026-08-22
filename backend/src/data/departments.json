@@ -1,0 +1,47 @@
+[
+  {
+    "id": "dept-1",
+    "name": "People & Culture",
+    "headId": "EMP-001",
+    "headName": "Elena Rostova",
+    "description": "HR, recruitment, and employee wellness",
+    "color": "#714b67",
+    "createdAt": "2020-01-01"
+  },
+  {
+    "id": "dept-2",
+    "name": "Engineering",
+    "headId": "EMP-102",
+    "headName": "Alex Morgan",
+    "description": "Software development and architecture",
+    "color": "#00a09d",
+    "createdAt": "2020-01-01"
+  },
+  {
+    "id": "dept-3",
+    "name": "Design",
+    "headId": "EMP-103",
+    "headName": "Sarah Jenkins",
+    "description": "Product design and user experience",
+    "color": "#8b5cf6",
+    "createdAt": "2020-01-01"
+  },
+  {
+    "id": "dept-4",
+    "name": "Finance",
+    "headId": "EMP-104",
+    "headName": "David Chen",
+    "description": "Financial planning and analysis",
+    "color": "#f59e0b",
+    "createdAt": "2020-01-01"
+  },
+  {
+    "id": "dept-5",
+    "name": "Marketing",
+    "headId": "EMP-105",
+    "headName": "Priya Patel",
+    "description": "Brand, campaigns and growth marketing",
+    "color": "#ef4444",
+    "createdAt": "2021-03-10"
+  }
+]

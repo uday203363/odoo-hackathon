@@ -1,0 +1,49 @@
+[
+  {
+    "id": "tkt-001",
+    "employeeId": "EMP-102",
+    "employeeName": "Alex Morgan",
+    "employeeAvatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    "department": "Engineering",
+    "category": "IT Request",
+    "subject": "Laptop RAM Upgrade Request",
+    "description": "My laptop has 8GB RAM insufficient for Docker + IDE. Requesting upgrade to 32GB.",
+    "status": "In Progress",
+    "priority": "High",
+    "createdOn": "2026-08-18",
+    "updatedOn": "2026-08-19",
+    "adminResponse": "IT team has ordered the upgrade. ETA: 3-5 business days.",
+    "respondedBy": "Elena Rostova"
+  },
+  {
+    "id": "tkt-002",
+    "employeeId": "EMP-104",
+    "employeeName": "David Chen",
+    "employeeAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    "department": "Finance",
+    "category": "Salary Query",
+    "subject": "July Payslip Discrepancy",
+    "description": "My July payslip shows different conveyance allowance than my offer letter.",
+    "status": "Resolved",
+    "priority": "Medium",
+    "createdOn": "2026-08-10",
+    "updatedOn": "2026-08-12",
+    "resolvedOn": "2026-08-12",
+    "adminResponse": "Corrected — one-time transport deduction during July offsite.",
+    "respondedBy": "Elena Rostova"
+  },
+  {
+    "id": "tkt-003",
+    "employeeId": "EMP-105",
+    "employeeName": "Priya Patel",
+    "employeeAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    "department": "Marketing",
+    "category": "Policy Clarification",
+    "subject": "WFH Policy for Client Visits",
+    "description": "Can I mark attendance as WFH on days I visit clients in a different city?",
+    "status": "Open",
+    "priority": "Low",
+    "createdOn": "2026-08-22",
+    "updatedOn": "2026-08-22"
+  }
+]

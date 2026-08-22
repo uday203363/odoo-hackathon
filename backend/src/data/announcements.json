@@ -1,0 +1,38 @@
+[
+  {
+    "id": "ann-1",
+    "title": "Q3 All-Hands Meeting — September 5th",
+    "content": "Join us for our quarterly all-hands meeting at 2 PM PST. Agenda: OKR review, product roadmap, and employee recognition.",
+    "priority": "Important",
+    "postedBy": "Elena Rostova",
+    "postedOn": "2026-08-20",
+    "readBy": [
+      "EMP-102",
+      "EMP-104"
+    ],
+    "expiresOn": "2026-09-05"
+  },
+  {
+    "id": "ann-2",
+    "title": "Office Wi-Fi Maintenance — Aug 24",
+    "content": "IT team will be performing scheduled network maintenance (9AM–12PM). All WFH requests for Aug 24 are pre-approved.",
+    "priority": "Urgent",
+    "postedBy": "Elena Rostova",
+    "postedOn": "2026-08-21",
+    "readBy": [],
+    "expiresOn": "2026-08-24"
+  },
+  {
+    "id": "ann-3",
+    "title": "New Mental Health Benefits",
+    "content": "Starting September 1st, all full-time employees are eligible for 6 free therapy sessions per year through Mindful Wellness. Enrollment opens August 25th.",
+    "priority": "Info",
+    "postedBy": "Elena Rostova",
+    "postedOn": "2026-08-18",
+    "readBy": [
+      "EMP-102",
+      "EMP-103",
+      "EMP-105"
+    ]
+  }
+]

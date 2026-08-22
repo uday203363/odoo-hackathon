@@ -1,0 +1,81 @@
+[
+  {
+    "id": "att-6a390c8c-b566-41f7-a333-b5b9ab3ef7de",
+    "employeeId": "EMP-107",
+    "employeeName": "sagar",
+    "date": "2026-08-22",
+    "checkIn": "11:08 AM",
+    "checkOut": null,
+    "workHours": 0,
+    "status": "Present",
+    "location": "Main HQ",
+    "isWFH": false
+  },
+  {
+    "id": "att-t1",
+    "employeeId": "EMP-001",
+    "employeeName": "Elena Rostova",
+    "date": "2026-08-22",
+    "checkIn": "08:45 AM",
+    "checkOut": null,
+    "workHours": 0,
+    "status": "Present",
+    "location": "Main HQ"
+  },
+  {
+    "id": "att-t2",
+    "employeeId": "EMP-102",
+    "employeeName": "Alex Morgan",
+    "date": "2026-08-22",
+    "checkIn": "09:00 AM",
+    "checkOut": null,
+    "workHours": 0,
+    "status": "WFH",
+    "isWFH": true,
+    "location": "Remote"
+  },
+  {
+    "id": "att-t3",
+    "employeeId": "EMP-103",
+    "employeeName": "Sarah Jenkins",
+    "date": "2026-08-22",
+    "checkIn": null,
+    "checkOut": null,
+    "workHours": 0,
+    "status": "Leave",
+    "notes": "Approved Leave"
+  },
+  {
+    "id": "att-t4",
+    "employeeId": "EMP-104",
+    "employeeName": "David Chen",
+    "date": "2026-08-22",
+    "checkIn": "09:35 AM",
+    "checkOut": null,
+    "workHours": 0,
+    "status": "Late",
+    "location": "Main HQ"
+  },
+  {
+    "id": "att-t5",
+    "employeeId": "EMP-105",
+    "employeeName": "Priya Patel",
+    "date": "2026-08-22",
+    "checkIn": "08:55 AM",
+    "checkOut": null,
+    "workHours": 0,
+    "status": "Present",
+    "location": "Main HQ"
+  },
+  {
+    "id": "att-t6",
+    "employeeId": "EMP-106",
+    "employeeName": "R.Uday kumar reddy",
+    "date": "2026-08-22",
+    "checkIn": "09:10 AM",
+    "checkOut": null,
+    "workHours": 0,
+    "status": "Present",
+    "location": "Main HQ"
+  }
+]

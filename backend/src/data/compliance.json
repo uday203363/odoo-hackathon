@@ -1,0 +1,38 @@
+[
+  {
+    "id": "cmp-1",
+    "employeeId": "EMP-103",
+    "employeeName": "Sarah Jenkins",
+    "type": "Contract Renewal",
+    "dueDate": "2025-11-10",
+    "status": "Overdue",
+    "notes": "Contract expired — renewal pending HR review"
+  },
+  {
+    "id": "cmp-2",
+    "employeeId": "EMP-105",
+    "employeeName": "Priya Patel",
+    "type": "Contract Renewal",
+    "dueDate": "2025-04-20",
+    "status": "Overdue",
+    "notes": "Month-to-month basis until renewal finalized"
+  },
+  {
+    "id": "cmp-3",
+    "employeeId": "EMP-104",
+    "employeeName": "David Chen",
+    "type": "Probation End",
+    "dueDate": "2024-07-15",
+    "status": "Done",
+    "notes": "Successfully passed probation. Confirmed."
+  },
+  {
+    "id": "cmp-4",
+    "employeeId": "EMP-104",
+    "employeeName": "David Chen",
+    "type": "Policy Acknowledgement",
+    "dueDate": "2026-08-30",
+    "status": "Pending",
+    "notes": "Code of Conduct (2026 edition) awaiting signature"
+  }
+]
