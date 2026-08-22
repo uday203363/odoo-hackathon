@@ -4,22 +4,32 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-// Helper to safely parse time strings (e.g. "08:45 AM", "09:30:15 AM", "14:20") into decimal hours
+// Helper to safely parse time strings (e.g. "08:45 AM", "09:30:15 AM", "09:30AM", "14:20", ISO) into decimal hours
 export function parseHours(timeStr: string): number {
   if (!timeStr) return 0;
   try {
-    // Sanitize non-breaking spaces (\u00a0) and extra whitespace
     const cleanStr = timeStr.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-    const parts = cleanStr.split(' ');
-    const timeParts = parts[0].split(':').map(Number);
-    let hours = timeParts[0] || 0;
-    const minutes = timeParts[1] || 0;
-    const period = parts[1] ? parts[1].toUpperCase() : null;
 
-    if (period === 'PM' && hours < 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
+    if (cleanStr.includes('T')) {
+      const d = new Date(cleanStr);
+      if (!isNaN(d.getTime())) {
+        return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+      }
+    }
 
-    return hours + (minutes / 60);
+    const match = cleanStr.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)?$/i);
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2], 10);
+      const seconds = match[3] ? parseInt(match[3], 10) : 0;
+      const period = match[4] ? match[4].toUpperCase() : null;
+
+      if (period === 'PM' && hours < 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+
+      return hours + minutes / 60 + seconds / 3600;
+    }
+    return 0;
   } catch {
     return 0;
   }
@@ -34,9 +44,9 @@ export function calculateWorkHours(checkInStr: string, checkOutStr: string): num
     outHours += 24;
   }
 
-  let diff = outHours - inHours;
+  const diff = outHours - inHours;
   if (diff <= 0 || isNaN(diff)) return 0;
-  return Math.round(diff * 10) / 10;
+  return Math.round(diff * 100) / 100;
 }
 
 // GET /api/attendance?date=YYYY-MM-DD&employeeId=EMP-XXX

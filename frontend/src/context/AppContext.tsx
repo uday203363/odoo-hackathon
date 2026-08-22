@@ -10,6 +10,8 @@ import {
   INITIAL_NOTIFICATIONS, INITIAL_ANNOUNCEMENTS, INITIAL_TICKETS, INITIAL_COMPLIANCE
 } from '../data/seedData';
 
+import { calculateWorkHours } from '../utils/timeUtils';
+
 const LS = 'dayflow_v2';
 const load = <T,>(key: string, fallback: T): T => {
   try { const s = localStorage.getItem(`${LS}_${key}`); return s ? JSON.parse(s) : fallback; } catch { return fallback; }
@@ -434,25 +436,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Accurately calculate logged work hours between checkIn and checkOut
-    const parseHrs = (tStr: string) => {
-      if (!tStr) return 0;
-      const cleanStr = tStr.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-      const parts = cleanStr.split(' ');
-      const timeParts = parts[0].split(':').map(Number);
-      let hours = timeParts[0] || 0;
-      const minutes = timeParts[1] || 0;
-      const period = parts[1] ? parts[1].toUpperCase() : null;
-      if (period === 'PM' && hours < 12) hours += 12;
-      if (period === 'AM' && hours === 12) hours = 0;
-      return hours + (minutes / 60);
-    };
-
-    const inH = parseHrs(rec.checkIn);
-    let outH = parseHrs(time);
-    if (outH < inH) outH += 24;
-    const diff = Math.max(0, outH - inH);
-    const loggedHours = Math.round(diff * 10) / 10;
+    // Accurately calculate logged work hours using standardized timeUtils
+    const loggedHours = calculateWorkHours(rec.checkIn, time);
 
     if (isBackendConnected) {
       try {

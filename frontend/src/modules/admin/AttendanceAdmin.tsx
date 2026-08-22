@@ -4,6 +4,7 @@ import { getBadgeClass, Modal, EmptyState } from '../../ui/components/common';
 import { Clock, LogIn, LogOut, Edit3, Search, CheckCircle2, MapPin, Building2, ShieldCheck, Home, Globe, Navigation, Crosshair, Calendar, Trash2, Tag } from 'lucide-react';
 import { exportAttendanceCSV } from '../../utils/exportUtils';
 import { getCurrentGPSLocation, getGoogleMapsEmbedUrl, calculateDistanceMeters, type GPSCoords } from '../../utils/geoUtils';
+import { formatWorkHours, calculateWorkHours } from '../../utils/timeUtils';
 import type { AttendanceRecord } from '../../types';
 
 export const AttendanceManager: React.FC = () => {
@@ -182,7 +183,7 @@ export const AttendanceManager: React.FC = () => {
           )}
           {todayRecord?.checkIn && (
             <span style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', padding: '2px 10px', borderRadius: 99 }}>
-              Logged {todayRecord.workHours > 0 ? `${todayRecord.workHours} hrs` : 'Active Shift'}
+              Logged {todayRecord.workHours > 0 ? formatWorkHours(todayRecord.workHours).full : 'Active Shift'}
             </span>
           )}
         </div>
@@ -279,7 +280,14 @@ export const AttendanceManager: React.FC = () => {
                   <td><span className={getBadgeClass(r.status)}>{r.status}</span></td>
                   <td>{r.checkIn || '—'}</td>
                   <td>{r.checkOut || '—'}</td>
-                  <td>{r.workHours > 0 ? `${r.workHours}h` : '—'}</td>
+                  <td>
+                    {r.workHours > 0
+                      ? formatWorkHours(r.workHours).formatted
+                      : r.checkIn
+                        ? <span style={{ fontSize: '.73rem', fontWeight: 600, color: 'var(--accent)' }}>In Progress</span>
+                        : '—'
+                    }
+                  </td>
                   {isAdmin && <td>{r.location || '—'}</td>}
                   <td style={{ fontSize: '.78rem', color: 'var(--text-3)' }}>{r.notes || '—'}</td>
                   {isAdmin && <td><button className="btn btn-outline btn-sm" onClick={() => { setEditModal(r); setEditStatus(r.status); setEditNotes(r.notes || ''); setEditRecordLocation(r.location || companyLocation); setEditRecordDate(r.date); }}><Edit3 size={13} /></button></td>}
