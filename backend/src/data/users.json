@@ -127,7 +127,7 @@
       "PostgreSQL"
     ],
     "leaveBalances": {
-      "paid": 12,
+      "paid": 9,
       "sick": 7,
       "unpaid": 0,
       "casual": 4,
@@ -251,7 +251,7 @@
       "paid": 14,
       "sick": 8,
       "unpaid": 0,
-      "casual": 3,
+      "casual": 0,
       "maternity": 0,
       "paternity": 5
     },

@@ -1,5 +1,18 @@
 [
   {
+    "id": "wfh-1787395062458",
+    "employeeId": "EMP-105",
+    "employeeName": "Priya Patel",
+    "employeeAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
+    "department": "Marketing",
+    "date": "2026-08-25",
+    "reason": "",
+    "status": "Approved",
+    "appliedOn": "2026-08-22",
+    "adminComments": "",
+    "reviewedBy": "Elena Rostova"
+  },
+  {
     "id": "wfh-001",
     "employeeId": "EMP-102",
     "employeeName": "Alex Morgan",
@@ -15,11 +28,13 @@
     "id": "wfh-002",
     "employeeId": "EMP-105",
     "employeeName": "Priya Patel",
-    "employeeAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    "employeeAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80",
     "department": "Marketing",
     "date": "2026-08-25",
     "reason": "Personal errand in morning.",
-    "status": "Pending",
-    "appliedOn": "2026-08-22"
+    "status": "Approved",
+    "appliedOn": "2026-08-22",
+    "adminComments": "",
+    "reviewedBy": "Elena Rostova"
   }
 ]

@@ -5,7 +5,7 @@ import { CalendarDays, Plus, CheckCircle2, XCircle, Home } from 'lucide-react';
 import type { LeaveType } from '../../types';
 
 export const LeaveWFHManager: React.FC = () => {
-  const { currentUser, leaveRequests, wfhRequests, reviewLeave, reviewWFH, applyLeave, applyWFH, cancelLeave } = useApp();
+  const { currentUser, users, leaveRequests, wfhRequests, reviewLeave, reviewWFH, applyLeave, applyWFH, cancelLeave } = useApp();
   const isAdmin = currentUser.role === 'admin';
   const [tab, setTab] = useState<'leave' | 'wfh'>('leave');
   const [leaveModal, setLeaveModal] = useState(false);
@@ -78,56 +78,68 @@ export const LeaveWFHManager: React.FC = () => {
       {tab === 'leave' && (
         myLeaves.length === 0
           ? <EmptyState icon={<CalendarDays size={40} />} title="No Leave Requests" subtitle={isAdmin ? 'No pending leave requests.' : 'Apply for leave using the button above.'} />
-          : myLeaves.map(r => (
-            <div key={r.id} className="card" style={{ marginBottom: '.85rem', borderLeft: `3px solid ${r.status === 'Approved' ? 'var(--green)' : r.status === 'Rejected' ? 'var(--red)' : 'var(--yellow)'}` }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.85rem' }}>
-                <img src={r.employeeAvatar} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', gap: '.6rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '.25rem' }}>
-                    {isAdmin && <strong style={{ fontSize: '.9rem' }}>{r.employeeName}</strong>}
-                    <span className={getBadgeClass(r.leaveType)} style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>{r.leaveType}</span>
-                    <span className={getBadgeClass(r.status)}>{r.status}</span>
+          : myLeaves.map(r => {
+            const emp = users.find(u => u.employeeId === r.employeeId);
+            const avatar = emp?.avatar || r.employeeAvatar || 'https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80';
+            const name = emp?.name || r.employeeName;
+
+            return (
+              <div key={r.id} className="card" style={{ marginBottom: '.85rem', borderLeft: `3px solid ${r.status === 'Approved' ? 'var(--green)' : r.status === 'Rejected' ? 'var(--red)' : 'var(--yellow)'}` }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '.85rem' }}>
+                  <img src={avatar} alt={name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid var(--border)' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '.6rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '.25rem' }}>
+                      {isAdmin && <strong style={{ fontSize: '.9rem' }}>{name}</strong>}
+                      <span className={getBadgeClass(r.leaveType)} style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>{r.leaveType}</span>
+                      <span className={getBadgeClass(r.status)}>{r.status}</span>
+                    </div>
+                    <p style={{ fontSize: '.83rem', color: 'var(--text-2)', marginBottom: '.2rem' }}>
+                      {r.startDate} → {r.endDate} <strong>({r.daysCount} day{r.daysCount > 1 ? 's' : ''})</strong>
+                      {isAdmin && <span style={{ fontSize: '.75rem', color: 'var(--text-4)', marginLeft: '.5rem' }}>· {r.employeeDepartment}</span>}
+                    </p>
+                    <p style={{ fontSize: '.8rem', color: 'var(--text-3)' }}>Reason: {r.reason}</p>
+                    {r.adminComments && <p style={{ fontSize: '.78rem', color: 'var(--accent)', marginTop: '.3rem' }}>HR: {r.adminComments}</p>}
                   </div>
-                  <p style={{ fontSize: '.83rem', color: 'var(--text-2)', marginBottom: '.2rem' }}>
-                    {r.startDate} → {r.endDate} <strong>({r.daysCount} day{r.daysCount > 1 ? 's' : ''})</strong>
-                    {isAdmin && <span style={{ fontSize: '.75rem', color: 'var(--text-4)', marginLeft: '.5rem' }}>· {r.employeeDepartment}</span>}
-                  </p>
-                  <p style={{ fontSize: '.8rem', color: 'var(--text-3)' }}>Reason: {r.reason}</p>
-                  {r.adminComments && <p style={{ fontSize: '.78rem', color: 'var(--accent)', marginTop: '.3rem' }}>HR: {r.adminComments}</p>}
-                </div>
-                <div style={{ display: 'flex', gap: '.4rem', flexShrink: 0 }}>
-                  {isAdmin && r.status === 'Pending' && (
-                    <button className="btn btn-primary btn-sm" onClick={() => { setReviewItem(r); setReviewType('leave'); setComments(''); }}>Review</button>
-                  )}
-                  {!isAdmin && r.status === 'Pending' && (
-                    <button className="btn btn-outline btn-sm" style={{ color: 'var(--red)' }} onClick={() => cancelLeave(r.id)}><XCircle size={13} /> Cancel</button>
-                  )}
+                  <div style={{ display: 'flex', gap: '.4rem', flexShrink: 0 }}>
+                    {isAdmin && r.status === 'Pending' && (
+                      <button className="btn btn-primary btn-sm" onClick={() => { setReviewItem(r); setReviewType('leave'); setComments(''); }}>Review</button>
+                    )}
+                    {!isAdmin && r.status === 'Pending' && (
+                      <button className="btn btn-outline btn-sm" style={{ color: 'var(--red)' }} onClick={() => cancelLeave(r.id)}><XCircle size={13} /> Cancel</button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
       )}
 
       {tab === 'wfh' && (
         myWFH.length === 0
           ? <EmptyState icon={<Home size={40} />} title="No WFH Requests" subtitle={isAdmin ? 'No WFH requests.' : 'Request work from home using the button above.'} />
-          : myWFH.map(r => (
-            <div key={r.id} className="card" style={{ marginBottom: '.85rem', borderLeft: `3px solid ${r.status === 'Approved' ? 'var(--green)' : r.status === 'Rejected' ? 'var(--red)' : 'var(--blue)'}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '.85rem' }}>
-                <img src={r.employeeAvatar} alt="" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  {isAdmin && <div style={{ fontWeight: 700, fontSize: '.9rem', marginBottom: '.1rem' }}>{r.employeeName} <span style={{ fontSize: '.75rem', color: 'var(--text-4)' }}>({r.department})</span></div>}
-                  <div style={{ fontSize: '.83rem' }}><strong>WFH Date:</strong> {r.date}</div>
-                  <div style={{ fontSize: '.8rem', color: 'var(--text-3)' }}>Reason: {r.reason}</div>
-                  {r.adminComments && <div style={{ fontSize: '.78rem', color: 'var(--accent)', marginTop: '.2rem' }}>HR: {r.adminComments}</div>}
+          : myWFH.map(r => {
+            const emp = users.find(u => u.employeeId === r.employeeId);
+            const avatar = emp?.avatar || r.employeeAvatar || 'https://images.unsplash.com/photo-1535713875002?w=150&auto=format&fit=crop&q=80';
+            const name = emp?.name || r.employeeName;
+
+            return (
+              <div key={r.id} className="card" style={{ marginBottom: '.85rem', borderLeft: `3px solid ${r.status === 'Approved' ? 'var(--green)' : r.status === 'Rejected' ? 'var(--red)' : 'var(--blue)'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.85rem' }}>
+                  <img src={avatar} alt={name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid var(--border)' }} />
+                  <div style={{ flex: 1 }}>
+                    {isAdmin && <div style={{ fontWeight: 700, fontSize: '.9rem', marginBottom: '.1rem' }}>{name} <span style={{ fontSize: '.75rem', color: 'var(--text-4)' }}>({r.department})</span></div>}
+                    <div style={{ fontSize: '.83rem' }}><strong>WFH Date:</strong> {r.date}</div>
+                    <div style={{ fontSize: '.8rem', color: 'var(--text-3)' }}>Reason: {r.reason}</div>
+                    {r.adminComments && <div style={{ fontSize: '.78rem', color: 'var(--accent)', marginTop: '.2rem' }}>HR: {r.adminComments}</div>}
+                  </div>
+                  <span className={getBadgeClass(r.status)}>{r.status}</span>
+                  {isAdmin && r.status === 'Pending' && (
+                    <button className="btn btn-primary btn-sm" onClick={() => { setReviewItem(r); setReviewType('wfh'); setComments(''); }}>Review</button>
+                  )}
                 </div>
-                <span className={getBadgeClass(r.status)}>{r.status}</span>
-                {isAdmin && r.status === 'Pending' && (
-                  <button className="btn btn-primary btn-sm" onClick={() => { setReviewItem(r); setReviewType('wfh'); setComments(''); }}>Review</button>
-                )}
               </div>
-            </div>
-          ))
+            );
+          })
       )}
 
       {/* Apply Leave Modal */}

@@ -41,6 +41,9 @@ export interface Document {
   uploadDate: string;
   expiryDate?: string;
   acknowledged?: boolean;
+  fileData?: string;
+  fileSize?: string;
+  uploadedBy?: string;
 }
 
 export interface User {

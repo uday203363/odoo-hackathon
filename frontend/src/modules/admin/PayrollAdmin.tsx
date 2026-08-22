@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { getBadgeClass, Modal, EmptyState } from '../../ui/components/common';
 import { DollarSign, Eye, Printer, Download, Play, Plus } from 'lucide-react';
 import type { PayrollRecord } from '../../types';
-import { exportPayrollCSV } from '../../utils/exportUtils';
+import { exportPayrollCSV, exportPayslipPDF } from '../../utils/exportUtils';
 
 const Payslip: React.FC<{ p: PayrollRecord; empName: string; onClose: () => void }> = ({ p, onClose, empName }) => (
   <div>
@@ -148,7 +148,18 @@ export const PayrollManager: React.FC = () => {
 
       {/* Payslip Modal */}
       <Modal open={!!viewSlip} onClose={() => setViewSlip(null)} title="Payslip Details" size="lg"
-        footer={<><button className="btn btn-outline" onClick={() => setViewSlip(null)}>Close</button><button className="btn btn-primary" onClick={() => window.print()}><Printer size={14} /> Print Payslip</button></>}>
+        footer={
+          <>
+            <button className="btn btn-outline" onClick={() => setViewSlip(null)}>Close</button>
+            <button className="btn btn-outline" onClick={() => window.print()}><Printer size={14} /> Print Payslip</button>
+            <button className="btn btn-primary" onClick={() => {
+              if (viewSlip) {
+                const empName = users.find(u => u.employeeId === viewSlip.employeeId)?.name || viewSlip.employeeName;
+                exportPayslipPDF(viewSlip, empName);
+              }
+            }}><Download size={14} /> Download PDF</button>
+          </>
+        }>
         {viewSlip && <Payslip p={viewSlip} empName={users.find(u => u.employeeId === viewSlip.employeeId)?.name || viewSlip.employeeName} onClose={() => setViewSlip(null)} />}
       </Modal>
 

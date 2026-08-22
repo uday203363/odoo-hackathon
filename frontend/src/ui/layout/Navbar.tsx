@@ -145,8 +145,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAuth }) => {
 
           {/* User pill & Password change */}
           <div className="user-pill">
-            <img src={currentUser.avatar} alt={currentUser.name} className="pill-avatar" />
-            <div>
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => setActiveTab('profile')} title="View & Edit My Profile">
+              <img src={currentUser.avatar} alt={currentUser.name} className="pill-avatar" />
+            </div>
+            <div style={{ cursor: 'pointer' }} onClick={() => setActiveTab('profile')} title="View & Edit My Profile">
               <div className="pill-name">{currentUser.name}</div>
               <div className="pill-role">{currentUser.role === 'admin' ? 'HR Officer / Admin' : currentUser.designation}</div>
             </div>

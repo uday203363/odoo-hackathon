@@ -168,7 +168,7 @@ const LEAVES = [
 
 const WFH = [
   { id: 'wfh-001', employeeId: 'EMP-102', employeeName: 'Alex Morgan', employeeAvatar: USERS[2].avatar, department: 'Engineering', date: TODAY, reason: 'Internet upgrade at office building.', status: 'Approved', appliedOn: '2026-08-21', reviewedBy: 'Elena Rostova' },
-  { id: 'wfh-002', employeeId: 'EMP-105', employeeName: 'Priya Patel', employeeAvatar: USERS[4].avatar, department: 'Marketing', date: '2026-08-25', reason: 'Personal errand in morning.', status: 'Pending', appliedOn: '2026-08-22' },
+  { id: 'wfh-002', employeeId: 'EMP-105', employeeName: 'Priya Patel', employeeAvatar: USERS[5].avatar, department: 'Marketing', date: '2026-08-25', reason: 'Personal errand in morning.', status: 'Pending', appliedOn: '2026-08-22' },
 ];
 
 const PAYROLL = USERS.map((u, i) => {

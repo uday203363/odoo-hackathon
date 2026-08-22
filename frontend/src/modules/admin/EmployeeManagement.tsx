@@ -1,8 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { getBadgeClass, Modal, EmptyState } from '../../ui/components/common';
-import { Users, Plus, Edit3, Trash2, Search, Eye, DollarSign, Mail, Phone, MapPin, Briefcase, FileText, UserPlus, Key, Calendar, ShieldCheck, Download, UploadCloud } from 'lucide-react';
+import { Users, Plus, Edit3, Trash2, Search, Eye, DollarSign, Mail, Phone, MapPin, Briefcase, FileText, UserPlus, Key, Calendar, ShieldCheck, Download, UploadCloud, FileCheck, CheckCircle2, Camera, Image, Upload } from 'lucide-react';
 import type { User, Document } from '../../types';
+import { downloadDocumentFile } from '../../utils/exportUtils';
+
+const PRESET_AVATARS = [
+  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
+];
 
 export const EmployeeManagement: React.FC = () => {
   const { users, departments, currentUser, activeTab, updateProfile, updateSalary, setSelectedEmployee, selectedEmployee, addEmployee, deleteEmployee, toast } = useApp();
@@ -12,13 +24,18 @@ export const EmployeeManagement: React.FC = () => {
   const [salaryModal, setSalaryModal] = useState(false);
   const [addEmpModal, setAddEmpModal] = useState(false);
   const [addDocModal, setAddDocModal] = useState(false);
+  const [photoModal, setPhotoModal] = useState(false);
+  const [photoTarget, setPhotoTarget] = useState<User | null>(null);
+  const [previewAvatar, setPreviewAvatar] = useState<string>('');
+  const [avatarUrlInput, setAvatarUrlInput] = useState<string>('');
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<User | null>(null);
   const [editUser, setEditUser] = useState<User | null>(null);
 
   // Forms
   const [profileForm, setProfileForm] = useState<Partial<User>>({});
   const [salaryForm, setSalaryForm] = useState<User['salary']>({ basic: 0, hra: 0, conveyance: 0, specialAllowance: 0, medicalAllowance: 0, pfDeduction: 0, taxDeduction: 0, professionalTax: 0, netSalary: 0 });
-  const [newDoc, setNewDoc] = useState({ name: '', category: 'Contract' as Document['category'] });
+  const [newDoc, setNewDoc] = useState<{ name: string; category: Document['category']; expiryDate: string }>({ name: '', category: 'Contract', expiryDate: '' });
+  const [selectedFile, setSelectedFile] = useState<{ name: string; data: string; size: string } | null>(null);
 
   // Add Employee Form calculation
   const nextEmpNum = Math.max(...users.map(u => {
@@ -52,10 +69,34 @@ export const EmployeeManagement: React.FC = () => {
     return matchSearch && matchDept;
   });
 
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      setPreviewAvatar(base64);
+      setProfileForm(p => ({ ...p, avatar: base64 }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveAvatar = () => {
+    const target = photoTarget || selectedEmployee || (activeTab === 'profile' ? currentUser : editUser);
+    if (!target || !previewAvatar) return;
+    updateProfile(target.id, { avatar: previewAvatar });
+    setPhotoModal(false);
+    setPhotoTarget(null);
+    setPreviewAvatar('');
+    setAvatarUrlInput('');
+    toast('Profile photo updated successfully!', 'success');
+  };
+
   const openEdit = (u: User) => {
     setEditUser(u);
     setProfileForm({
       name: u.name,
+      avatar: u.avatar,
       designation: u.designation,
       phone: u.phone,
       address: u.address,
@@ -72,7 +113,12 @@ export const EmployeeManagement: React.FC = () => {
 
   const openSalary = (u: User) => { setEditUser(u); setSalaryForm(u.salary); setSalaryModal(true); };
 
-  const handleSaveProfile = () => { if (editUser) { updateProfile(editUser.id, profileForm); setEditModal(false); } };
+  const handleSaveProfile = () => {
+    if (editUser) {
+      updateProfile(editUser.id, profileForm);
+      setEditModal(false);
+    }
+  };
   const computeNet = (s: User['salary']) => s.basic + s.hra + s.conveyance + s.specialAllowance + s.medicalAllowance - s.pfDeduction - s.taxDeduction - s.professionalTax;
 
   const handleCreateEmployee = async () => {
@@ -95,21 +141,49 @@ export const EmployeeManagement: React.FC = () => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64Data = reader.result as string;
+      const sizeStr = file.size > 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(file.size / 1024)} KB`;
+      setSelectedFile({ name: file.name, data: base64Data, size: sizeStr });
+      if (!newDoc.name) {
+        setNewDoc(prev => ({ ...prev, name: file.name }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAddDocument = () => {
-    const target = selectedEmployee || editUser;
-    if (!target || !newDoc.name) return;
+    const target = selectedEmployee || (activeTab === 'profile' ? currentUser : editUser);
+    if (!target) return;
+    const docName = newDoc.name.trim() || selectedFile?.name || `${target.name.replace(/\s+/g, '_')}_Document.pdf`;
     const docItem: Document = {
       id: `doc-${Date.now()}`,
-      name: newDoc.name,
+      name: docName,
       category: newDoc.category,
       uploadDate: new Date().toISOString().split('T')[0],
+      expiryDate: newDoc.expiryDate || undefined,
+      fileData: selectedFile?.data,
+      fileSize: selectedFile?.size || '154 KB',
+      uploadedBy: currentUser.name,
       acknowledged: true
     };
-    const updatedDocs = [...(target.documents || []), docItem];
+    const currentDocs: Document[] = target.documents && target.documents.length > 0 ? target.documents : [
+      { id: 'doc-1', name: `${target.name.replace(/\s+/g, '_')}_Employment_Contract.pdf`, category: 'Contract' as Document['category'], uploadDate: target.joinDate, acknowledged: true },
+      { id: 'doc-2', name: `${target.name.replace(/\s+/g, '_')}_NDA_Agreement.pdf`, category: 'Contract' as Document['category'], uploadDate: target.joinDate, acknowledged: true },
+      { id: 'doc-3', name: `${target.name.replace(/\s+/g, '_')}_Tax_W4_Form.pdf`, category: 'Tax Form' as Document['category'], uploadDate: target.joinDate, acknowledged: true },
+    ];
+    const updatedDocs: Document[] = [docItem, ...currentDocs];
     updateProfile(target.id, { documents: updatedDocs });
     setAddDocModal(false);
-    setNewDoc({ name: '', category: 'Contract' });
-    toast(`Added document ${newDoc.name} to employee profile.`, 'success');
+    setNewDoc({ name: '', category: 'Contract', expiryDate: '' });
+    setSelectedFile(null);
+    toast(`Document "${docName}" uploaded successfully!`, 'success');
   };
 
   // Profile View mode (either if employee selected, or activeTab === 'profile')
@@ -118,11 +192,20 @@ export const EmployeeManagement: React.FC = () => {
   if (displayUser) {
     const u = displayUser;
     const isSelf = u.id === currentUser.id;
-    const docs = u.documents && u.documents.length > 0 ? u.documents : [
-      { id: 'doc-1', name: `${u.name.replace(/\s+/g, '_')}_Employment_Contract.pdf`, category: 'Contract', uploadDate: u.joinDate, acknowledged: true },
-      { id: 'doc-2', name: `${u.name.replace(/\s+/g, '_')}_NDA_Agreement.pdf`, category: 'Contract', uploadDate: u.joinDate, acknowledged: true },
-      { id: 'doc-3', name: `${u.name.replace(/\s+/g, '_')}_Tax_W4_Form.pdf`, category: 'Tax Form', uploadDate: u.joinDate, acknowledged: true },
+    const isHRorAdmin = currentUser.role === 'admin' || currentUser.role === 'hr' || currentUser.role === 'super_admin';
+    const canUpload = isHRorAdmin || isSelf;
+
+    const docs: Document[] = u.documents && u.documents.length > 0 ? u.documents : [
+      { id: 'doc-1', name: `${u.name.replace(/\s+/g, '_')}_Employment_Contract.pdf`, category: 'Contract' as Document['category'], uploadDate: u.joinDate, acknowledged: true },
+      { id: 'doc-2', name: `${u.name.replace(/\s+/g, '_')}_NDA_Agreement.pdf`, category: 'Contract' as Document['category'], uploadDate: u.joinDate, acknowledged: true },
+      { id: 'doc-3', name: `${u.name.replace(/\s+/g, '_')}_Tax_W4_Form.pdf`, category: 'Tax Form' as Document['category'], uploadDate: u.joinDate, acknowledged: true },
     ];
+
+    const handleDeleteDoc = (docId: string, docName: string) => {
+      const updated = (u.documents || docs).filter(d => d.id !== docId);
+      updateProfile(u.id, { documents: updated });
+      toast(`Removed document: ${docName}`, 'info');
+    };
 
     return (
       <div>
@@ -132,8 +215,8 @@ export const EmployeeManagement: React.FC = () => {
             <div style={{ display: 'flex', gap: '.6rem' }}>
               {!isSelf && <button className="btn btn-outline" onClick={() => setSelectedEmployee(null)}>← Back to List</button>}
               <button className="btn btn-outline" onClick={() => openEdit(u)}><Edit3 size={14} /> Edit Profile</button>
-              {currentUser.role === 'admin' && <button className="btn btn-primary" onClick={() => openSalary(u)}><DollarSign size={14} /> Salary Structure</button>}
-              {currentUser.role === 'admin' && !isSelf && (
+              {isHRorAdmin && <button className="btn btn-primary" onClick={() => openSalary(u)}><DollarSign size={14} /> Salary Structure</button>}
+              {isHRorAdmin && !isSelf && (
                 <button className="btn btn-danger" onClick={() => setDeleteConfirmModal(u)}><Trash2 size={14} /> Delete Account</button>
               )}
             </div>
@@ -143,9 +226,52 @@ export const EmployeeManagement: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem', alignItems: 'start' }}>
           {/* Left Column: Avatar & Basic Details */}
           <div className="card" style={{ textAlign: 'center' }}>
-            <img src={u.avatar} alt="" style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 1rem', border: '3px solid var(--primary-light)' }} />
+            {/* Interactive Avatar with Camera Edit Badge */}
+            <div style={{ position: 'relative', width: 96, height: 96, margin: '0 auto .75rem' }}>
+              <img
+                src={u.avatar}
+                alt={u.name}
+                style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--primary-light)', boxShadow: 'var(--shadow-sm)' }}
+              />
+              {canUpload && (
+                <button
+                  onClick={() => {
+                    setPhotoTarget(u);
+                    setPreviewAvatar(u.avatar);
+                    setAvatarUrlInput('');
+                    setPhotoModal(true);
+                  }}
+                  style={{
+                    position: 'absolute', bottom: 0, right: 0, width: 32, height: 32,
+                    borderRadius: '50%', background: 'var(--primary)', color: '#fff',
+                    border: '2.5px solid var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'transform .15s ease'
+                  }}
+                  title="Change Profile Photo"
+                >
+                  <Camera size={15} />
+                </button>
+              )}
+            </div>
+
             <h2 style={{ fontWeight: 800 }}>{u.name} {isSelf && <span style={{ fontSize: '.78rem', color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 8px', borderRadius: 99, fontWeight: 700, marginLeft: 4 }}>(You)</span>}</h2>
             <p style={{ color: 'var(--text-3)', fontSize: '.87rem', marginTop: '.15rem' }}>{u.designation}</p>
+            
+            {canUpload && (
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: '.4rem', fontSize: '.76rem', color: 'var(--primary)' }}
+                onClick={() => {
+                  setPhotoTarget(u);
+                  setPreviewAvatar(u.avatar);
+                  setAvatarUrlInput('');
+                  setPhotoModal(true);
+                }}
+              >
+                <Camera size={13} /> Edit Profile Photo
+              </button>
+            )}
+
             <div style={{ marginTop: '.75rem', display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
               <span className={getBadgeClass(u.employmentStatus)} style={{ alignSelf: 'center' }}>{u.employmentStatus}</span>
               <span style={{ fontWeight: 700, fontSize: '.83rem', color: 'var(--primary)' }}>{u.employeeId}</span>
@@ -185,30 +311,59 @@ export const EmployeeManagement: React.FC = () => {
               <div className="card-header">
                 <div>
                   <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <FileText size={18} color="var(--accent)" /> Contracts & Documents
+                    <FileText size={18} color="var(--accent)" /> Contracts & Official Documents
                   </h3>
-                  <p className="card-subtitle">Employee employment agreement and tax certificates.</p>
+                  <p className="card-subtitle">Employee employment agreements, tax certificates, and verified documents.</p>
                 </div>
-                {currentUser.role === 'admin' && (
-                  <button className="btn btn-outline btn-sm" onClick={() => setAddDocModal(true)}>
-                    <UploadCloud size={13} /> Upload Document
+                {canUpload && (
+                  <button className="btn btn-primary btn-sm" onClick={() => { setSelectedFile(null); setAddDocModal(true); }}>
+                    <UploadCloud size={14} /> Upload Document
                   </button>
                 )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.65rem' }}>
                 {docs.map(doc => (
-                  <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.75rem', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.65rem', flex: 1 }}>
-                      <FileText size={18} color="var(--primary)" />
+                  <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.85rem 1rem', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', gap: '.75rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flex: 1, minWidth: '220px' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FileText size={18} />
+                      </div>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '.84rem' }}>{doc.name}</div>
-                        <div style={{ fontSize: '.73rem', color: 'var(--text-3)' }}>{doc.category} · Uploaded: {doc.uploadDate}</div>
+                        <div style={{ fontWeight: 700, fontSize: '.86rem', color: 'var(--text-1)' }}>{doc.name}</div>
+                        <div style={{ fontSize: '.74rem', color: 'var(--text-3)', marginTop: '2px' }}>
+                          {doc.category} · Uploaded: {doc.uploadDate} {doc.fileSize ? `(${doc.fileSize})` : ''} {doc.uploadedBy ? `by ${doc.uploadedBy}` : ''}
+                        </div>
                       </div>
                     </div>
-                    <span className="badge badge-active" style={{ marginRight: 10 }}>Signed & Active</span>
-                    <button className="btn btn-ghost btn-sm" onClick={() => toast(`Downloading ${doc.name}...`, 'info')}>
-                      <Download size={13} />
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                      <span className="badge badge-active">
+                        <CheckCircle2 size={11} /> Signed & Verified
+                      </span>
+                      <button
+                        className="btn btn-outline btn-sm"
+                        onClick={async () => {
+                          toast(`Downloading ${doc.name}...`, 'info');
+                          await downloadDocumentFile(doc, u);
+                          toast(`Downloaded ${doc.name} successfully!`, 'success');
+                        }}
+                        title="Download Document Locally"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <Download size={13} /> Download
+                      </button>
+                      {canUpload && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: 'var(--red)', padding: '4px 7px' }}
+                          onClick={() => handleDeleteDoc(doc.id, doc.name)}
+                          title="Delete Document"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -247,8 +402,40 @@ export const EmployeeManagement: React.FC = () => {
         </div>
 
         {/* Edit Profile Modal */}
-        <Modal open={editModal} onClose={() => setEditModal(false)} title="Edit Profile & Contract Details"
+        <Modal open={editModal} onClose={() => setEditModal(false)} title="Edit Profile & Details"
           footer={<><button className="btn btn-outline" onClick={() => setEditModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSaveProfile}>Save Changes</button></>}>
+          
+          {/* Profile Photo Edit Section */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '.85rem', background: 'var(--surface-2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', marginBottom: '1rem' }}>
+            <img
+              src={profileForm.avatar || editUser?.avatar}
+              alt=""
+              style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary-light)' }}
+            />
+            <div style={{ flex: 1 }}>
+              <label className="form-label" style={{ marginBottom: 4 }}>Profile Photo</label>
+              <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+                <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Camera size={13} /> Choose Image
+                  <input type="file" accept="image/*" onChange={handleAvatarFileChange} style={{ display: 'none' }} />
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    if (editUser) {
+                      setPhotoTarget(editUser);
+                      setPreviewAvatar(profileForm.avatar || editUser.avatar);
+                      setPhotoModal(true);
+                    }
+                  }}
+                >
+                  <Image size={13} /> Select from Presets / URL
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div className="form-row">
             <div className="form-group"><label className="form-label">Full Name</label><input className="form-control" value={profileForm.name || ''} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} /></div>
             <div className="form-group"><label className="form-label">Designation</label><input className="form-control" value={profileForm.designation || ''} onChange={e => setProfileForm({ ...profileForm, designation: e.target.value })} /></div>
@@ -279,13 +466,114 @@ export const EmployeeManagement: React.FC = () => {
           <div className="form-group"><label className="form-label">Bio</label><textarea className="form-control" rows={3} value={profileForm.bio || ''} onChange={e => setProfileForm({ ...profileForm, bio: e.target.value })} /></div>
         </Modal>
 
-        {/* Upload Document Modal */}
-        <Modal open={addDocModal} onClose={() => setAddDocModal(false)} title="Upload Contract Document" size="sm"
-          footer={<><button className="btn btn-outline" onClick={() => setAddDocModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleAddDocument}>Upload Document</button></>}>
+        {/* Dedicated Update Profile Photo Modal */}
+        <Modal
+          open={photoModal}
+          onClose={() => { setPhotoModal(false); setPreviewAvatar(''); setAvatarUrlInput(''); }}
+          title="Update Profile Photo"
+          size="sm"
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={() => { setPhotoModal(false); setPreviewAvatar(''); setAvatarUrlInput(''); }}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveAvatar} disabled={!previewAvatar}>
+                <Camera size={14} /> Save Profile Photo
+              </button>
+            </>
+          }
+        >
+          {/* Live Preview */}
+          <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+            <div style={{ position: 'relative', width: 90, height: 90, margin: '0 auto .5rem' }}>
+              <img
+                src={previewAvatar || photoTarget?.avatar || currentUser.avatar}
+                alt="Preview"
+                style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--primary)', boxShadow: 'var(--shadow-md)' }}
+              />
+            </div>
+            <p style={{ fontSize: '.78rem', color: 'var(--text-3)' }}>Live Photo Preview</p>
+          </div>
+
+          {/* Option 1: File Upload */}
           <div className="form-group">
-            <label className="form-label">Document Name *</label>
+            <label className="form-label">Upload From Device</label>
+            <label style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem',
+              border: '2px dashed var(--border-strong)', borderRadius: 'var(--r-md)', padding: '.85rem',
+              cursor: 'pointer', background: 'var(--surface-2)', transition: 'border-color .18s ease'
+            }}>
+              <Upload size={16} color="var(--primary)" />
+              <span style={{ fontSize: '.82rem', fontWeight: 700, color: 'var(--primary)' }}>Choose Local Image</span>
+              <input type="file" accept="image/*" onChange={handleAvatarFileChange} style={{ display: 'none' }} />
+            </label>
+          </div>
+
+          {/* Option 2: Image URL */}
+          <div className="form-group">
+            <label className="form-label">Or Enter Image URL</label>
+            <div style={{ display: 'flex', gap: '.4rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="https://images.unsplash.com/..."
+                value={avatarUrlInput}
+                onChange={e => {
+                  setAvatarUrlInput(e.target.value);
+                  if (e.target.value.trim()) setPreviewAvatar(e.target.value.trim());
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Option 3: Quick Presets */}
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label">Or Select from Professional Presets</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '.6rem', marginTop: '.35rem' }}>
+              {PRESET_AVATARS.map((url, idx) => (
+                <img
+                  key={idx}
+                  src={url}
+                  alt={`Preset ${idx + 1}`}
+                  onClick={() => setPreviewAvatar(url)}
+                  style={{
+                    width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer',
+                    border: previewAvatar === url ? '3px solid var(--primary)' : '2px solid var(--border)',
+                    transform: previewAvatar === url ? 'scale(1.08)' : 'none',
+                    transition: 'transform .15s ease, border-color .15s ease'
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </Modal>
+
+        {/* Upload Document Modal */}
+        <Modal open={addDocModal} onClose={() => setAddDocModal(false)} title="Upload Official Document / Contract" size="sm"
+          footer={<><button className="btn btn-outline" onClick={() => setAddDocModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleAddDocument}><UploadCloud size={14} /> Upload Document</button></>}>
+          
+          {/* File Picker Box */}
+          <div className="form-group">
+            <label className="form-label">Select File From Computer</label>
+            <label style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              border: '2px dashed var(--border-strong)', borderRadius: 'var(--r-md)', padding: '1.25rem 1rem',
+              cursor: 'pointer', background: 'var(--surface-2)', transition: 'border-color .2s ease'
+            }}>
+              <UploadCloud size={24} color="var(--primary)" style={{ marginBottom: 6 }} />
+              <span style={{ fontSize: '.84rem', fontWeight: 700, color: 'var(--primary)' }}>
+                {selectedFile ? selectedFile.name : 'Choose File to Upload'}
+              </span>
+              <span style={{ fontSize: '.72rem', color: 'var(--text-3)', marginTop: 2 }}>
+                {selectedFile ? `File size: ${selectedFile.size}` : 'Supports PDF, DOCX, PNG, JPG, TXT'}
+              </span>
+              <input type="file" onChange={handleFileChange} style={{ display: 'none' }} accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg" />
+            </label>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Document Title / Name *</label>
             <input className="form-control" placeholder="e.g. Senior_Engineer_Agreement.pdf" value={newDoc.name} onChange={e => setNewDoc({ ...newDoc, name: e.target.value })} />
           </div>
+
           <div className="form-group">
             <label className="form-label">Category</label>
             <select className="form-control" value={newDoc.category} onChange={e => setNewDoc({ ...newDoc, category: e.target.value as Document['category'] })}>
@@ -295,6 +583,11 @@ export const EmployeeManagement: React.FC = () => {
               <option>Certificate</option>
               <option>Policy</option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Expiry Date (Optional)</label>
+            <input type="date" className="form-control" value={newDoc.expiryDate} onChange={e => setNewDoc({ ...newDoc, expiryDate: e.target.value })} />
           </div>
         </Modal>
 
