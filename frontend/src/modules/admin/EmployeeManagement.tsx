@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { getBadgeClass, Modal, EmptyState } from '../../ui/components/common';
-import { Users, Plus, Edit3, Trash2, Search, Eye, DollarSign, Mail, Phone, MapPin, Briefcase, FileText, UserPlus, Key, Calendar, ShieldCheck, Download, UploadCloud, FileCheck, CheckCircle2, Camera, Image, Upload } from 'lucide-react';
+import { Users, Plus, Edit3, Trash2, Search, Eye, DollarSign, Mail, Phone, MapPin, Briefcase, FileText, UserPlus, Key, Calendar, ShieldCheck, Download, UploadCloud, FileCheck, CheckCircle2, Camera, Image, Upload, Award } from 'lucide-react';
 import type { User, Document } from '../../types';
 import { downloadDocumentFile } from '../../utils/exportUtils';
 
@@ -30,6 +30,7 @@ export const EmployeeManagement: React.FC = () => {
   const [avatarUrlInput, setAvatarUrlInput] = useState<string>('');
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<User | null>(null);
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [newSkillInput, setNewSkillInput] = useState('');
 
   // Forms
   const [profileForm, setProfileForm] = useState<Partial<User>>({});
@@ -48,6 +49,7 @@ export const EmployeeManagement: React.FC = () => {
     name: '',
     email: '',
     password: 'join@123',
+    role: 'employee' as User['role'],
     designation: 'Software Engineer',
     departmentId: departments[0]?.id || 'dept-2',
     departmentName: departments[0]?.name || 'Engineering',
@@ -58,6 +60,7 @@ export const EmployeeManagement: React.FC = () => {
     employmentStatus: 'Active' as User['employmentStatus'],
     probationEndDate: '',
     contractEndDate: '',
+    skillsString: 'React, Node.js, TypeScript, SQL',
     basic: 4500,
     hra: 1800,
   });
@@ -122,16 +125,28 @@ export const EmployeeManagement: React.FC = () => {
   const computeNet = (s: User['salary']) => s.basic + s.hra + s.conveyance + s.specialAllowance + s.medicalAllowance - s.pfDeduction - s.taxDeduction - s.professionalTax;
 
   const handleCreateEmployee = async () => {
-    if (!newEmp.name || !newEmp.email) return;
+    if (!newEmp.name || !newEmp.email) {
+      toast('Please enter Full Name and Email Address.', 'error');
+      return;
+    }
     const selectedDept = departments.find(d => d.id === newEmp.departmentId);
+    const skillsList = newEmp.skillsString.split(',').map(s => s.trim()).filter(Boolean);
+
     await addEmployee({
       ...newEmp,
       departmentName: selectedDept?.name || newEmp.departmentName,
+      skills: skillsList,
     });
     setAddEmpModal(false);
     setSearch('');
     setDeptFilter('All');
-    setNewEmp({ name: '', email: '', password: 'join@123', designation: 'Software Engineer', departmentId: departments[0]?.id || 'dept-2', departmentName: departments[0]?.name || 'Engineering', phone: '+1 (555) 123-4567', address: 'San Francisco, CA', joinDate: new Date().toISOString().split('T')[0], birthDate: '1995-01-01', employmentStatus: 'Active', probationEndDate: '', contractEndDate: '', basic: 4500, hra: 1800 });
+    setNewEmp({
+      name: '', email: '', password: 'join@123', role: 'employee',
+      designation: 'Software Engineer', departmentId: departments[0]?.id || 'dept-2', departmentName: departments[0]?.name || 'Engineering',
+      phone: '+1 (555) 123-4567', address: 'San Francisco, CA', joinDate: new Date().toISOString().split('T')[0],
+      birthDate: '1995-01-01', employmentStatus: 'Active', probationEndDate: '', contractEndDate: '',
+      skillsString: 'React, Node.js, TypeScript, SQL', basic: 4500, hra: 1800
+    });
   };
 
   const handleDeleteEmployee = async () => {
@@ -139,6 +154,27 @@ export const EmployeeManagement: React.FC = () => {
       await deleteEmployee(deleteConfirmModal.id);
       setDeleteConfirmModal(null);
     }
+  };
+
+  const handleAddSkillToUser = (targetUser: User) => {
+    if (!newSkillInput.trim()) return;
+    const currentSkills = targetUser.skills || [];
+    const skillToAdd = newSkillInput.trim();
+    if (currentSkills.includes(skillToAdd)) {
+      toast('Skill already exists on this profile', 'info');
+      return;
+    }
+    const updatedSkills = [...currentSkills, skillToAdd];
+    updateProfile(targetUser.id, { skills: updatedSkills });
+    setNewSkillInput('');
+    toast(`Skill "${skillToAdd}" added successfully!`, 'success');
+  };
+
+  const handleRemoveSkillFromUser = (targetUser: User, skillToRemove: string) => {
+    const currentSkills = targetUser.skills || [];
+    const updatedSkills = currentSkills.filter(s => s !== skillToRemove);
+    updateProfile(targetUser.id, { skills: updatedSkills });
+    toast(`Skill "${skillToRemove}" removed.`, 'info');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,7 +222,7 @@ export const EmployeeManagement: React.FC = () => {
     toast(`Document "${docName}" uploaded successfully!`, 'success');
   };
 
-  // Profile View mode (either if employee selected, or activeTab === 'profile')
+  // Profile View mode
   const displayUser = selectedEmployee || (activeTab === 'profile' ? currentUser : null);
 
   if (displayUser) {
@@ -201,381 +237,252 @@ export const EmployeeManagement: React.FC = () => {
       { id: 'doc-3', name: `${u.name.replace(/\s+/g, '_')}_Tax_W4_Form.pdf`, category: 'Tax Form' as Document['category'], uploadDate: u.joinDate, acknowledged: true },
     ];
 
-    const handleDeleteDoc = (docId: string, docName: string) => {
-      const updated = (u.documents || docs).filter(d => d.id !== docId);
-      updateProfile(u.id, { documents: updated });
-      toast(`Removed document: ${docName}`, 'info');
-    };
-
     return (
       <div>
-        <div className="page-header">
-          <div className="page-header-row">
-            <div><h1>{isSelf ? 'My Profile' : 'Employee Profile'}</h1></div>
-            <div style={{ display: 'flex', gap: '.6rem' }}>
-              {!isSelf && <button className="btn btn-outline" onClick={() => setSelectedEmployee(null)}>← Back to List</button>}
-              <button className="btn btn-outline" onClick={() => openEdit(u)}><Edit3 size={14} /> Edit Profile</button>
-              {isHRorAdmin && <button className="btn btn-primary" onClick={() => openSalary(u)}><DollarSign size={14} /> Salary Structure</button>}
-              {isHRorAdmin && !isSelf && (
-                <button className="btn btn-danger" onClick={() => setDeleteConfirmModal(u)}><Trash2 size={14} /> Delete Account</button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem', alignItems: 'start' }}>
-          {/* Left Column: Avatar & Basic Details */}
-          <div className="card" style={{ textAlign: 'center' }}>
-            {/* Interactive Avatar with Camera Edit Badge */}
-            <div style={{ position: 'relative', width: 96, height: 96, margin: '0 auto .75rem' }}>
-              <img
-                src={u.avatar}
-                alt={u.name}
-                style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--primary-light)', boxShadow: 'var(--shadow-sm)' }}
-              />
-              {canUpload && (
-                <button
-                  onClick={() => {
-                    setPhotoTarget(u);
-                    setPreviewAvatar(u.avatar);
-                    setAvatarUrlInput('');
-                    setPhotoModal(true);
-                  }}
-                  style={{
-                    position: 'absolute', bottom: 0, right: 0, width: 32, height: 32,
-                    borderRadius: '50%', background: 'var(--primary)', color: '#fff',
-                    border: '2.5px solid var(--surface)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', boxShadow: 'var(--shadow-md)', transition: 'transform .15s ease'
-                  }}
-                  title="Change Profile Photo"
-                >
-                  <Camera size={15} />
-                </button>
-              )}
-            </div>
-
-            <h2 style={{ fontWeight: 800 }}>{u.name} {isSelf && <span style={{ fontSize: '.78rem', color: 'var(--primary)', background: 'var(--primary-light)', padding: '2px 8px', borderRadius: 99, fontWeight: 700, marginLeft: 4 }}>(You)</span>}</h2>
-            <p style={{ color: 'var(--text-3)', fontSize: '.87rem', marginTop: '.15rem' }}>{u.designation}</p>
-            
-            {canUpload && (
-              <button
-                className="btn btn-ghost btn-sm"
-                style={{ marginTop: '.4rem', fontSize: '.76rem', color: 'var(--primary)' }}
-                onClick={() => {
-                  setPhotoTarget(u);
-                  setPreviewAvatar(u.avatar);
-                  setAvatarUrlInput('');
-                  setPhotoModal(true);
-                }}
-              >
-                <Camera size={13} /> Edit Profile Photo
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+            {selectedEmployee && (
+              <button className="btn btn-outline btn-sm" onClick={() => setSelectedEmployee(null)}>
+                ← Back to All Employees
               </button>
             )}
-
-            <div style={{ marginTop: '.75rem', display: 'flex', flexDirection: 'column', gap: '.5rem' }}>
-              <span className={getBadgeClass(u.employmentStatus)} style={{ alignSelf: 'center' }}>{u.employmentStatus}</span>
-              <span style={{ fontWeight: 700, fontSize: '.83rem', color: 'var(--primary)' }}>{u.employeeId}</span>
-            </div>
-            {u.bio && <p style={{ marginTop: '1rem', fontSize: '.82rem', color: 'var(--text-3)', lineHeight: 1.6 }}>{u.bio}</p>}
-            {u.skills && <div style={{ marginTop: '.85rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>{u.skills.map(s => <span key={s} className="skill-tag">{s}</span>)}</div>}
+            <h2 style={{ margin: 0, fontSize: '1.4rem' }}>{isSelf ? 'My Profile & Documents' : `${u.name}'s Employee Profile`}</h2>
           </div>
+          {isHRorAdmin && !isSelf && (
+            <div style={{ display: 'flex', gap: '.5rem' }}>
+              <button className="btn btn-outline btn-sm" onClick={() => openEdit(u)}><Edit3 size={14} /> Edit Profile</button>
+              <button className="btn btn-outline btn-sm" onClick={() => openSalary(u)}><DollarSign size={14} /> Update Salary</button>
+            </div>
+          )}
+        </div>
 
-          {/* Right Column: Contract, Leave, Salary, Documents */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Employment & Contract Details */}
-            <div className="card">
-              <h3 className="card-title" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <ShieldCheck size={18} color="var(--primary)" /> Contract & Employment Details
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.85rem' }}>
-                {[
-                  ['Contract Status', u.employmentStatus],
-                  ['Department', u.departmentName],
-                  ['Contract Type', 'Full-Time Employment Agreement'],
-                  ['Joining Date', u.joinDate],
-                  ['Probation End Date', u.probationEndDate || (u.employmentStatus === 'Probation' ? '2026-11-30' : 'Completed')],
-                  ['Contract Expiry / Renewal', u.contractEndDate || 'Permanent / Open-Ended'],
-                  ['Email', u.email],
-                  ['Phone', u.phone]
-                ].map(([l, v]) => (
-                  <div key={l} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '.75rem' }}>
-                    <p style={{ fontSize: '.72rem', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{l}</p>
-                    <p style={{ fontWeight: 700, fontSize: '.87rem', marginTop: '.2rem', color: l === 'Contract Status' ? 'var(--primary)' : 'var(--text-1)' }}>{v}</p>
-                  </div>
-                ))}
+        <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '1.5rem' }}>
+          {/* Left Column Profile Card */}
+          <div>
+            <div className="card" style={{ textAlign: 'center' }}>
+              <div style={{ position: 'relative', display: 'inline-block', margin: '0 auto 1rem' }}>
+                <img src={u.avatar} alt="" style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--primary-light)' }} />
+                {canUpload && (
+                  <button
+                    onClick={() => { setPhotoTarget(u); setPreviewAvatar(u.avatar); setPhotoModal(true); }}
+                    style={{ position: 'absolute', bottom: 0, right: 0, background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}
+                    title="Change Profile Photo"
+                  >
+                    <Camera size={15} />
+                  </button>
+                )}
+              </div>
+              <h3 style={{ margin: '0 0 .25rem 0' }}>{u.name}</h3>
+              <p style={{ fontSize: '.83rem', color: 'var(--text-3)', margin: '0 0 .75rem 0' }}>{u.designation}</p>
+              <span className={getBadgeClass(u.employmentStatus)}>{u.employmentStatus}</span>
+
+              <div style={{ margin: '1.25rem 0', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '.6rem', fontSize: '.83rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: 'var(--text-2)' }}>
+                  <Briefcase size={15} color="var(--primary)" /> <span>{u.departmentName}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: 'var(--text-2)' }}>
+                  <Mail size={15} color="var(--primary)" /> <span>{u.email}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: 'var(--text-2)' }}>
+                  <Phone size={15} color="var(--primary)" /> <span>{u.phone}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: 'var(--text-2)' }}>
+                  <MapPin size={15} color="var(--primary)" /> <span>{u.address}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', color: 'var(--text-2)' }}>
+                  <Calendar size={15} color="var(--primary)" /> <span>Joined {u.joinDate}</span>
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* Contracts & Signed Documents */}
+          {/* Right Column Docs & Details */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            
+            {/* Skills & Core Competencies Card */}
             <div className="card">
               <div className="card-header">
                 <div>
-                  <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <FileText size={18} color="var(--accent)" /> Contracts & Official Documents
-                  </h3>
-                  <p className="card-subtitle">Employee employment agreements, tax certificates, and verified documents.</p>
+                  <h3 className="card-title"><Award size={18} color="var(--primary)" /> Skills & Core Competencies</h3>
+                  <p className="card-subtitle">Technical skills, frameworks, and professional competencies.</p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem', marginBottom: canUpload ? '1rem' : 0 }}>
+                {(!u.skills || u.skills.length === 0) ? (
+                  <p style={{ fontSize: '.83rem', color: 'var(--text-3)', margin: 0 }}>No skills added yet.</p>
+                ) : (
+                  u.skills.map(skill => (
+                    <span
+                      key={skill}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '.4rem',
+                        background: 'var(--primary-light)',
+                        color: 'var(--primary)',
+                        padding: '.35rem .75rem',
+                        borderRadius: '99px',
+                        fontSize: '.82rem',
+                        fontWeight: 700,
+                        border: '1px solid var(--border)'
+                      }}
+                    >
+                      {skill}
+                      {canUpload && (
+                        <button
+                          onClick={() => handleRemoveSkillFromUser(u, skill)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--primary)',
+                            cursor: 'pointer',
+                            padding: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontWeight: 900,
+                            marginLeft: 2,
+                            opacity: 0.8
+                          }}
+                          title="Remove skill"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))
+                )}
+              </div>
+
+              {canUpload && (
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Add a new skill (e.g. Python, Figma, AWS, Docker)..."
+                    value={newSkillInput}
+                    onChange={e => setNewSkillInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddSkillToUser(u); }}
+                    style={{ fontSize: '.83rem' }}
+                  />
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => handleAddSkillToUser(u)}
+                    style={{ flexShrink: 0 }}
+                  >
+                    + Add Skill
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Documents Section */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <h3 className="card-title"><FileText size={18} color="var(--primary)" /> Employee Contracts & Documents</h3>
+                  <p className="card-subtitle">Official contracts, NDA agreements, tax forms, and IDs.</p>
                 </div>
                 {canUpload && (
-                  <button className="btn btn-primary btn-sm" onClick={() => { setSelectedFile(null); setAddDocModal(true); }}>
-                    <UploadCloud size={14} /> Upload Document
+                  <button className="btn btn-primary btn-sm" onClick={() => { setSelectedFile(null); setNewDoc({ name: '', category: 'Contract', expiryDate: '' }); setAddDocModal(true); }}>
+                    <Plus size={14} /> Upload Document
                   </button>
                 )}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '.65rem' }}>
-                {docs.map(doc => (
-                  <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '.85rem 1rem', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', gap: '.75rem', flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flex: 1, minWidth: '220px' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--primary-light)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <FileText size={18} />
+                {docs.map(d => (
+                  <div key={d.id} className="card-flat" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+                      <div style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '.5rem', borderRadius: 'var(--r-sm)' }}>
+                        <FileCheck size={20} />
                       </div>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: '.86rem', color: 'var(--text-1)' }}>{doc.name}</div>
-                        <div style={{ fontSize: '.74rem', color: 'var(--text-3)', marginTop: '2px' }}>
-                          {doc.category} · Uploaded: {doc.uploadDate} {doc.fileSize ? `(${doc.fileSize})` : ''} {doc.uploadedBy ? `by ${doc.uploadedBy}` : ''}
+                        <div style={{ fontWeight: 700, fontSize: '.88rem' }}>{d.name}</div>
+                        <div style={{ fontSize: '.75rem', color: 'var(--text-3)' }}>
+                          Category: <strong>{d.category}</strong> · Uploaded: {d.uploadDate} {d.fileSize ? `· ${d.fileSize}` : ''}
                         </div>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                      <span className="badge badge-active">
-                        <CheckCircle2 size={11} /> Signed & Verified
-                      </span>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={async () => {
-                          toast(`Downloading ${doc.name}...`, 'info');
-                          await downloadDocumentFile(doc, u);
-                          toast(`Downloaded ${doc.name} successfully!`, 'success');
-                        }}
-                        title="Download Document Locally"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                      >
+                      <button className="btn btn-outline btn-sm" onClick={() => downloadDocumentFile(d)} title="Download file">
                         <Download size={13} /> Download
                       </button>
-                      {canUpload && (
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ color: 'var(--red)', padding: '4px 7px' }}
-                          onClick={() => handleDeleteDoc(doc.id, doc.name)}
-                          title="Delete Document"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Leave Balances */}
-            <div className="card">
-              <h3 className="card-title" style={{ marginBottom: '1rem' }}>Leave Balances</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '.65rem' }}>
-                {Object.entries(u.leaveBalances).map(([type, val]) => (
-                  <div key={type} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '.65rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--primary)' }}>{val}</div>
-                    <div style={{ fontSize: '.72rem', color: 'var(--text-3)', fontWeight: 600, textTransform: 'capitalize' }}>{type}</div>
+            {/* Compensation Overview */}
+            {isHRorAdmin && (
+              <div className="card">
+                <div className="card-header">
+                  <h3 className="card-title"><DollarSign size={18} color="var(--green)" /> Compensation & Salary Structure</h3>
+                  <button className="btn btn-outline btn-sm" onClick={() => openSalary(u)}>Edit Salary</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '1rem' }}>
+                  <div><div style={{ fontSize: '.75rem', color: 'var(--text-3)', fontWeight: 600 }}>BASIC SALARY</div><div style={{ fontWeight: 700, marginTop: '.2rem' }}>${u.salary.basic.toLocaleString()}</div></div>
+                  <div><div style={{ fontSize: '.75rem', color: 'var(--text-3)', fontWeight: 600 }}>HRA ALLOWANCE</div><div style={{ fontWeight: 700, marginTop: '.2rem' }}>${u.salary.hra.toLocaleString()}</div></div>
+                  <div><div style={{ fontSize: '.75rem', color: 'var(--text-3)', fontWeight: 600 }}>SPECIAL ALLOWANCE</div><div style={{ fontWeight: 700, marginTop: '.2rem' }}>${u.salary.specialAllowance.toLocaleString()}</div></div>
+                  <div><div style={{ fontSize: '.75rem', color: 'var(--text-3)', fontWeight: 600 }}>PF DEDUCTION</div><div style={{ fontWeight: 700, marginTop: '.2rem', color: 'var(--red)' }}>-${u.salary.pfDeduction.toLocaleString()}</div></div>
+                  <div><div style={{ fontSize: '.75rem', color: 'var(--text-3)', fontWeight: 600 }}>TAX DEDUCTION</div><div style={{ fontWeight: 700, marginTop: '.2rem', color: 'var(--red)' }}>-${u.salary.taxDeduction.toLocaleString()}</div></div>
+                  <div style={{ gridColumn: '1 / -1', background: 'var(--surface-2)', padding: '.75rem 1rem', borderRadius: 'var(--r-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, fontSize: '.9rem' }}>MONTHLY NET TAKE-HOME</span>
+                    <span style={{ fontWeight: 900, fontSize: '1.25rem', color: 'var(--green)' }}>${u.salary.netSalary.toLocaleString()}</span>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-
-            {/* Salary Overview */}
-            <div className="card">
-              <h3 className="card-title" style={{ marginBottom: '1rem' }}>Salary Overview</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.65rem' }}>
-                {[
-                  ['Gross Pay', `$${(u.salary.basic + u.salary.hra + u.salary.conveyance + u.salary.specialAllowance + u.salary.medicalAllowance).toLocaleString()}`],
-                  ['Deductions', `-$${(u.salary.pfDeduction + u.salary.taxDeduction + u.salary.professionalTax).toLocaleString()}`],
-                  ['Net Salary', `$${u.salary.netSalary.toLocaleString()}`]
-                ].map(([l, v]) => (
-                  <div key={l} style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '.75rem' }}>
-                    <p style={{ fontSize: '.72rem', color: 'var(--text-3)', fontWeight: 700 }}>{l}</p>
-                    <p style={{ fontWeight: 900, fontSize: '1.1rem', marginTop: '.15rem', color: l === 'Net Salary' ? 'var(--green)' : l === 'Deductions' ? 'var(--red)' : 'var(--text-1)' }}>{v}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Edit Profile Modal */}
-        <Modal open={editModal} onClose={() => setEditModal(false)} title="Edit Profile & Details"
-          footer={<><button className="btn btn-outline" onClick={() => setEditModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSaveProfile}>Save Changes</button></>}>
-          
-          {/* Profile Photo Edit Section */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '.85rem', background: 'var(--surface-2)', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', marginBottom: '1rem' }}>
-            <img
-              src={profileForm.avatar || editUser?.avatar}
-              alt=""
-              style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary-light)' }}
-            />
-            <div style={{ flex: 1 }}>
-              <label className="form-label" style={{ marginBottom: 4 }}>Profile Photo</label>
-              <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
-                <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Camera size={13} /> Choose Image
-                  <input type="file" accept="image/*" onChange={handleAvatarFileChange} style={{ display: 'none' }} />
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => {
-                    if (editUser) {
-                      setPhotoTarget(editUser);
-                      setPreviewAvatar(profileForm.avatar || editUser.avatar);
-                      setPhotoModal(true);
-                    }
-                  }}
-                >
-                  <Image size={13} /> Select from Presets / URL
-                </button>
-              </div>
-            </div>
+        {/* Change Photo Modal */}
+        <Modal open={photoModal} onClose={() => setPhotoModal(false)} title="Update Profile Photo" size="sm"
+          footer={<><button className="btn btn-outline" onClick={() => setPhotoModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSaveAvatar} disabled={!previewAvatar}><CheckCircle2 size={14} /> Save Photo</button></>}>
+          <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
+            <img src={previewAvatar || photoTarget?.avatar} alt="Preview" style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--primary-light)', margin: '0 auto .75rem' }} />
+            <p style={{ fontSize: '.8rem', color: 'var(--text-3)' }}>Upload a picture or choose a standard avatar preset.</p>
           </div>
 
-          <div className="form-row">
-            <div className="form-group"><label className="form-label">Full Name</label><input className="form-control" value={profileForm.name || ''} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} /></div>
-            <div className="form-group"><label className="form-label">Designation</label><input className="form-control" value={profileForm.designation || ''} onChange={e => setProfileForm({ ...profileForm, designation: e.target.value })} /></div>
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label className="form-label">Upload Custom Image File</label>
+            <input type="file" accept="image/*" className="form-control" onChange={handleAvatarFileChange} />
           </div>
-          <div className="form-row">
-            <div className="form-group"><label className="form-label">Date of Birth (DOB)</label><input className="form-control" type="date" value={profileForm.birthDate || ''} onChange={e => setProfileForm({ ...profileForm, birthDate: e.target.value })} /></div>
-            <div className="form-group"><label className="form-label">Phone</label><input className="form-control" value={profileForm.phone || ''} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} /></div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Contract Status</label>
-              <select className="form-control" value={profileForm.employmentStatus} onChange={e => setProfileForm({ ...profileForm, employmentStatus: e.target.value as User['employmentStatus'] })}>
-                <option>Active</option>
-                <option>Probation</option>
-                <option>Notice Period</option>
-                <option>Inactive</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Probation End Date</label>
-              <input className="form-control" type="date" value={profileForm.probationEndDate || ''} onChange={e => setProfileForm({ ...profileForm, probationEndDate: e.target.value })} />
-            </div>
-          </div>
+
           <div className="form-group">
-            <label className="form-label">Contract Renewal / Expiry Date</label>
-            <input className="form-control" type="date" value={profileForm.contractEndDate || ''} onChange={e => setProfileForm({ ...profileForm, contractEndDate: e.target.value })} />
-          </div>
-          <div className="form-group"><label className="form-label">Bio</label><textarea className="form-control" rows={3} value={profileForm.bio || ''} onChange={e => setProfileForm({ ...profileForm, bio: e.target.value })} /></div>
-        </Modal>
-
-        {/* Dedicated Update Profile Photo Modal */}
-        <Modal
-          open={photoModal}
-          onClose={() => { setPhotoModal(false); setPreviewAvatar(''); setAvatarUrlInput(''); }}
-          title="Update Profile Photo"
-          size="sm"
-          footer={
-            <>
-              <button className="btn btn-outline" onClick={() => { setPhotoModal(false); setPreviewAvatar(''); setAvatarUrlInput(''); }}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSaveAvatar} disabled={!previewAvatar}>
-                <Camera size={14} /> Save Profile Photo
-              </button>
-            </>
-          }
-        >
-          {/* Live Preview */}
-          <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
-            <div style={{ position: 'relative', width: 90, height: 90, margin: '0 auto .5rem' }}>
-              <img
-                src={previewAvatar || photoTarget?.avatar || currentUser.avatar}
-                alt="Preview"
-                style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--primary)', boxShadow: 'var(--shadow-md)' }}
-              />
-            </div>
-            <p style={{ fontSize: '.78rem', color: 'var(--text-3)' }}>Live Photo Preview</p>
-          </div>
-
-          {/* Option 1: File Upload */}
-          <div className="form-group">
-            <label className="form-label">Upload From Device</label>
-            <label style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.5rem',
-              border: '2px dashed var(--border-strong)', borderRadius: 'var(--r-md)', padding: '.85rem',
-              cursor: 'pointer', background: 'var(--surface-2)', transition: 'border-color .18s ease'
-            }}>
-              <Upload size={16} color="var(--primary)" />
-              <span style={{ fontSize: '.82rem', fontWeight: 700, color: 'var(--primary)' }}>Choose Local Image</span>
-              <input type="file" accept="image/*" onChange={handleAvatarFileChange} style={{ display: 'none' }} />
-            </label>
-          </div>
-
-          {/* Option 2: Image URL */}
-          <div className="form-group">
-            <label className="form-label">Or Enter Image URL</label>
-            <div style={{ display: 'flex', gap: '.4rem' }}>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="https://images.unsplash.com/..."
-                value={avatarUrlInput}
-                onChange={e => {
-                  setAvatarUrlInput(e.target.value);
-                  if (e.target.value.trim()) setPreviewAvatar(e.target.value.trim());
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Option 3: Quick Presets */}
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Or Select from Professional Presets</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '.6rem', marginTop: '.35rem' }}>
-              {PRESET_AVATARS.map((url, idx) => (
+            <label className="form-label">Or Choose Preset Avatar</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '.5rem', marginTop: '.35rem' }}>
+              {PRESET_AVATARS.map((url, i) => (
                 <img
-                  key={idx}
+                  key={i}
                   src={url}
-                  alt={`Preset ${idx + 1}`}
+                  alt={`Avatar ${i}`}
                   onClick={() => setPreviewAvatar(url)}
-                  style={{
-                    width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer',
-                    border: previewAvatar === url ? '3px solid var(--primary)' : '2px solid var(--border)',
-                    transform: previewAvatar === url ? 'scale(1.08)' : 'none',
-                    transition: 'transform .15s ease, border-color .15s ease'
-                  }}
+                  style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: previewAvatar === url ? '3px solid var(--accent)' : '2px solid transparent' }}
                 />
               ))}
             </div>
           </div>
         </Modal>
 
-        {/* Upload Document Modal */}
-        <Modal open={addDocModal} onClose={() => setAddDocModal(false)} title="Upload Official Document / Contract" size="sm"
-          footer={<><button className="btn btn-outline" onClick={() => setAddDocModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleAddDocument}><UploadCloud size={14} /> Upload Document</button></>}>
-          
-          {/* File Picker Box */}
+        {/* Add Document Modal */}
+        <Modal open={addDocModal} onClose={() => setAddDocModal(false)} title="Upload Employee Document"
+          footer={<><button className="btn btn-outline" onClick={() => setAddDocModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleAddDocument}><UploadCloud size={14} /> Complete Upload</button></>}>
           <div className="form-group">
-            <label className="form-label">Select File From Computer</label>
-            <label style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              border: '2px dashed var(--border-strong)', borderRadius: 'var(--r-md)', padding: '1.25rem 1rem',
-              cursor: 'pointer', background: 'var(--surface-2)', transition: 'border-color .2s ease'
-            }}>
-              <UploadCloud size={24} color="var(--primary)" style={{ marginBottom: 6 }} />
-              <span style={{ fontSize: '.84rem', fontWeight: 700, color: 'var(--primary)' }}>
-                {selectedFile ? selectedFile.name : 'Choose File to Upload'}
-              </span>
-              <span style={{ fontSize: '.72rem', color: 'var(--text-3)', marginTop: 2 }}>
-                {selectedFile ? `File size: ${selectedFile.size}` : 'Supports PDF, DOCX, PNG, JPG, TXT'}
-              </span>
-              <input type="file" onChange={handleFileChange} style={{ display: 'none' }} accept=".pdf,.docx,.doc,.txt,.png,.jpg,.jpeg" />
-            </label>
+            <label className="form-label">Select Document File</label>
+            <input type="file" className="form-control" onChange={handleFileChange} />
+            {selectedFile && <div style={{ fontSize: '.75rem', color: 'var(--green)', marginTop: '.25rem', fontWeight: 600 }}>Selected: {selectedFile.name} ({selectedFile.size})</div>}
           </div>
 
           <div className="form-group">
-            <label className="form-label">Document Title / Name *</label>
-            <input className="form-control" placeholder="e.g. Senior_Engineer_Agreement.pdf" value={newDoc.name} onChange={e => setNewDoc({ ...newDoc, name: e.target.value })} />
+            <label className="form-label">Document Display Name</label>
+            <input className="form-control" placeholder="e.g. Executive_Employment_Agreement.pdf" value={newDoc.name} onChange={e => setNewDoc({ ...newDoc, name: e.target.value })} />
           </div>
 
           <div className="form-group">
-            <label className="form-label">Category</label>
+            <label className="form-label">Document Category</label>
             <select className="form-control" value={newDoc.category} onChange={e => setNewDoc({ ...newDoc, category: e.target.value as Document['category'] })}>
               <option>Contract</option>
               <option>ID Proof</option>
@@ -590,31 +497,14 @@ export const EmployeeManagement: React.FC = () => {
             <input type="date" className="form-control" value={newDoc.expiryDate} onChange={e => setNewDoc({ ...newDoc, expiryDate: e.target.value })} />
           </div>
         </Modal>
-
-        {/* Delete Confirm Modal */}
-        <Modal open={!!deleteConfirmModal} onClose={() => setDeleteConfirmModal(null)} title="Confirm Employee Removal" size="sm"
-          footer={<><button className="btn btn-outline" onClick={() => setDeleteConfirmModal(null)}>Cancel</button><button className="btn btn-danger" onClick={handleDeleteEmployee}><Trash2 size={14} /> Confirm Delete</button></>}>
-          <p style={{ fontSize: '.9rem', color: 'var(--text-2)' }}>
-            Are you sure you want to delete employee <strong>{deleteConfirmModal?.name}</strong> ({deleteConfirmModal?.employeeId})? This action cannot be undone.
-          </p>
-        </Modal>
-
-        {/* Salary Modal */}
-        <Modal open={salaryModal} onClose={() => setSalaryModal(false)} title="Update Salary Structure"
-          footer={<><button className="btn btn-outline" onClick={() => setSalaryModal(false)}>Cancel</button><button className="btn btn-primary" onClick={() => { if (editUser) { updateSalary(editUser.id, { ...salaryForm, netSalary: computeNet(salaryForm) }); setSalaryModal(false); } }}>Save Salary</button></>}>
-          <div className="form-row">
-            {[['Basic', 'basic'], ['HRA', 'hra'], ['Conveyance', 'conveyance'], ['Special Allowance', 'specialAllowance'], ['Medical Allowance', 'medicalAllowance'], ['PF Deduction', 'pfDeduction'], ['Income Tax', 'taxDeduction'], ['Professional Tax', 'professionalTax']].map(([label, key]) => (
-              <div key={key} className="form-group"><label className="form-label">{label}</label><input type="number" className="form-control" value={(salaryForm as any)[key]} onChange={e => setSalaryForm({ ...salaryForm, [key]: Number(e.target.value) })} /></div>
-            ))}
-          </div>
-          <div style={{ background: 'var(--green-bg)', border: '1px solid var(--green)', borderRadius: 'var(--r-md)', padding: '.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 700 }}>Net Salary (computed)</span>
-            <span style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--green)' }}>${computeNet(salaryForm).toLocaleString()}</span>
-          </div>
-        </Modal>
       </div>
     );
   }
+
+  // Calculate net pay preview for newEmp form
+  const previewBasic = Number(newEmp.basic) || 4500;
+  const previewHra = Number(newEmp.hra) || 1800;
+  const previewNet = previewBasic + previewHra + 400 + 1000 + 300 - (Math.round(previewBasic * 0.12) + Math.round((previewBasic + previewHra + 1700) * 0.1) + 200);
 
   return (
     <div>
@@ -682,34 +572,139 @@ export const EmployeeManagement: React.FC = () => {
         </table>
       </div>
 
-      {/* Onboard Employee Modal */}
-      <Modal open={addEmpModal} onClose={() => setAddEmpModal(false)} title="Onboard New Employee"
-        footer={<><button className="btn btn-outline" onClick={() => setAddEmpModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleCreateEmployee}><UserPlus size={15} /> Create Employee</button></>}>
-        <div style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '.65rem .85rem', borderRadius: 'var(--r-md)', marginBottom: '1rem', fontSize: '.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Key size={14} /> Assigned Employee ID: {autoEmpId}
+      {/* Onboard Employee Full Executive Modal */}
+      <Modal open={addEmpModal} onClose={() => setAddEmpModal(false)} title="Onboard New Employee" size="lg"
+        footer={<><button className="btn btn-outline" onClick={() => setAddEmpModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleCreateEmployee}><UserPlus size={15} /> Create & Save Employee</button></>}>
+        
+        <div style={{ background: 'var(--primary-light)', color: 'var(--primary)', padding: '.65rem .85rem', borderRadius: 'var(--r-md)', marginBottom: '1.25rem', fontSize: '.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Key size={15} /> Auto-Assigned Employee ID: <strong>{autoEmpId}</strong></span>
+          <span style={{ fontSize: '.75rem', opacity: .8 }}>Default Login Password: <code>{newEmp.password}</code></span>
         </div>
-        <div className="form-row">
-          <div className="form-group"><label className="form-label">Full Name *</label><input className="form-control" value={newEmp.name} onChange={e => setNewEmp({ ...newEmp, name: e.target.value })} /></div>
-          <div className="form-group"><label className="form-label">Email Address *</label><input className="form-control" type="email" value={newEmp.email} onChange={e => setNewEmp({ ...newEmp, email: e.target.value })} /></div>
-        </div>
-        <div className="form-row">
-          <div className="form-group"><label className="form-label">Designation</label><input className="form-control" value={newEmp.designation} onChange={e => setNewEmp({ ...newEmp, designation: e.target.value })} /></div>
-          <div className="form-group">
-            <label className="form-label">Department</label>
-            <select className="form-control" value={newEmp.departmentId} onChange={e => setNewEmp({ ...newEmp, departmentId: e.target.value })}>
-              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
+
+        {/* Section 1: Identity & System Access */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ fontSize: '.85rem', textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: '.65rem', borderBottom: '1px solid var(--border)', paddingBottom: '.3rem' }}>
+            1. Identity & Credentials
+          </h4>
+          <div className="form-row">
+            <div className="form-group"><label className="form-label">Full Name *</label><input className="form-control" placeholder="e.g. Johnathan Vance" value={newEmp.name} onChange={e => setNewEmp({ ...newEmp, name: e.target.value })} /></div>
+            <div className="form-group"><label className="form-label">Email Address *</label><input className="form-control" type="email" placeholder="johnathan@dayflow.com" value={newEmp.email} onChange={e => setNewEmp({ ...newEmp, email: e.target.value })} /></div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">System Role</label>
+              <select className="form-control" value={newEmp.role} onChange={e => setNewEmp({ ...newEmp, role: e.target.value as User['role'] })}>
+                <option value="employee">Employee (Self-Service Portal)</option>
+                <option value="admin">HR / Admin Officer</option>
+              </select>
+            </div>
+            <div className="form-group"><label className="form-label">Initial Password</label><input className="form-control" value={newEmp.password} onChange={e => setNewEmp({ ...newEmp, password: e.target.value })} /></div>
           </div>
         </div>
-        <div className="form-row">
-          <div className="form-group"><label className="form-label">Joining Date</label><input className="form-control" type="date" value={newEmp.joinDate} onChange={e => setNewEmp({ ...newEmp, joinDate: e.target.value })} /></div>
+
+        {/* Section 2: Position & Contract Details */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ fontSize: '.85rem', textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: '.65rem', borderBottom: '1px solid var(--border)', paddingBottom: '.3rem' }}>
+            2. Position & Employment Contract
+          </h4>
+          <div className="form-row">
+            <div className="form-group"><label className="form-label">Designation / Title</label><input className="form-control" placeholder="Senior Full Stack Engineer" value={newEmp.designation} onChange={e => setNewEmp({ ...newEmp, designation: e.target.value })} /></div>
+            <div className="form-group">
+              <label className="form-label">Department</label>
+              <select className="form-control" value={newEmp.departmentId} onChange={e => setNewEmp({ ...newEmp, departmentId: e.target.value })}>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group"><label className="form-label">Joining Date</label><input className="form-control" type="date" value={newEmp.joinDate} onChange={e => setNewEmp({ ...newEmp, joinDate: e.target.value })} /></div>
+            <div className="form-group">
+              <label className="form-label">Employment Status / Contract</label>
+              <select className="form-control" value={newEmp.employmentStatus} onChange={e => setNewEmp({ ...newEmp, employmentStatus: e.target.value as User['employmentStatus'] })}>
+                <option value="Active">Active (Full-Time Permanent)</option>
+                <option value="Probation">Probationary Period</option>
+                <option value="Notice Period">Notice Period</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
+          {newEmp.employmentStatus === 'Probation' && (
+            <div className="form-group">
+              <label className="form-label">Probation End Date</label>
+              <input className="form-control" type="date" value={newEmp.probationEndDate} onChange={e => setNewEmp({ ...newEmp, probationEndDate: e.target.value })} />
+            </div>
+          )}
+        </div>
+
+        {/* Section 3: Contact & Skills */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h4 style={{ fontSize: '.85rem', textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: '.65rem', borderBottom: '1px solid var(--border)', paddingBottom: '.3rem' }}>
+            3. Contact & Technical Skills
+          </h4>
+          <div className="form-row">
+            <div className="form-group"><label className="form-label">Phone Number</label><input className="form-control" placeholder="+1 (555) 000-0000" value={newEmp.phone} onChange={e => setNewEmp({ ...newEmp, phone: e.target.value })} /></div>
+            <div className="form-group"><label className="form-label">Date of Birth</label><input className="form-control" type="date" value={newEmp.birthDate} onChange={e => setNewEmp({ ...newEmp, birthDate: e.target.value })} /></div>
+          </div>
+          <div className="form-group" style={{ marginBottom: '.75rem' }}>
+            <label className="form-label">Office / Residential Address</label>
+            <input className="form-control" placeholder="1088 Market St, San Francisco, CA" value={newEmp.address} onChange={e => setNewEmp({ ...newEmp, address: e.target.value })} />
+          </div>
           <div className="form-group">
-            <label className="form-label">Contract Status</label>
-            <select className="form-control" value={newEmp.employmentStatus} onChange={e => setNewEmp({ ...newEmp, employmentStatus: e.target.value as User['employmentStatus'] })}>
-              <option>Active</option><option>Probation</option><option>Notice Period</option><option>Inactive</option>
-            </select>
+            <label className="form-label">Skills & Competencies (comma-separated)</label>
+            <input className="form-control" placeholder="React, Node.js, TypeScript, SQL, AWS" value={newEmp.skillsString} onChange={e => setNewEmp({ ...newEmp, skillsString: e.target.value })} />
           </div>
         </div>
+
+        {/* Section 4: Initial Compensation Setup */}
+        <div>
+          <h4 style={{ fontSize: '.85rem', textTransform: 'uppercase', letterSpacing: '.5px', color: 'var(--text-3)', marginBottom: '.65rem', borderBottom: '1px solid var(--border)', paddingBottom: '.3rem' }}>
+            4. Monthly Salary Setup
+          </h4>
+          <div className="form-row">
+            <div className="form-group"><label className="form-label">Basic Monthly Pay ($)</label><input className="form-control" type="number" value={newEmp.basic} onChange={e => setNewEmp({ ...newEmp, basic: Number(e.target.value) })} /></div>
+            <div className="form-group"><label className="form-label">HRA Allowance ($)</label><input className="form-control" type="number" value={newEmp.hra} onChange={e => setNewEmp({ ...newEmp, hra: Number(e.target.value) })} /></div>
+          </div>
+          <div style={{ background: 'var(--surface-2)', padding: '.75rem 1rem', borderRadius: 'var(--r-md)', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '.82rem', fontWeight: 600, color: 'var(--text-2)' }}>Estimated Net Monthly Take-Home:</span>
+            <span style={{ fontWeight: 900, fontSize: '1.1rem', color: 'var(--green)' }}>${previewNet.toLocaleString()} / mo</span>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal open={editModal} onClose={() => setEditModal(false)} title={`Edit ${editUser?.name}`} size="md"
+        footer={<><button className="btn btn-outline" onClick={() => setEditModal(false)}>Cancel</button><button className="btn btn-primary" onClick={handleSaveProfile}>Save Changes</button></>}>
+        <div className="form-row">
+          <div className="form-group"><label className="form-label">Full Name</label><input className="form-control" value={profileForm.name || ''} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} /></div>
+          <div className="form-group"><label className="form-label">Designation</label><input className="form-control" value={profileForm.designation || ''} onChange={e => setProfileForm({ ...profileForm, designation: e.target.value })} /></div>
+        </div>
+        <div className="form-row">
+          <div className="form-group"><label className="form-label">Phone</label><input className="form-control" value={profileForm.phone || ''} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} /></div>
+          <div className="form-group"><label className="form-label">Birth Date</label><input className="form-control" type="date" value={profileForm.birthDate || ''} onChange={e => setProfileForm({ ...profileForm, birthDate: e.target.value })} /></div>
+        </div>
+        <div className="form-group"><label className="form-label">Address</label><input className="form-control" value={profileForm.address || ''} onChange={e => setProfileForm({ ...profileForm, address: e.target.value })} /></div>
+      </Modal>
+
+      {/* Salary Modal */}
+      <Modal open={salaryModal} onClose={() => setSalaryModal(false)} title="Update Salary Structure"
+        footer={<><button className="btn btn-outline" onClick={() => setSalaryModal(false)}>Cancel</button><button className="btn btn-primary" onClick={() => { if (editUser) { updateSalary(editUser.id, { ...salaryForm, netSalary: computeNet(salaryForm) }); setSalaryModal(false); } }}>Save Salary</button></>}>
+        <div className="form-row">
+          {[['Basic', 'basic'], ['HRA', 'hra'], ['Conveyance', 'conveyance'], ['Special Allowance', 'specialAllowance'], ['Medical Allowance', 'medicalAllowance'], ['PF Deduction', 'pfDeduction'], ['Income Tax', 'taxDeduction'], ['Professional Tax', 'professionalTax']].map(([label, key]) => (
+            <div key={key} className="form-group"><label className="form-label">{label}</label><input type="number" className="form-control" value={(salaryForm as any)[key]} onChange={e => setSalaryForm({ ...salaryForm, [key]: Number(e.target.value) })} /></div>
+          ))}
+        </div>
+        <div style={{ background: 'var(--green-bg)', border: '1px solid var(--green)', borderRadius: 'var(--r-md)', padding: '.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontWeight: 700 }}>Net Salary (computed)</span>
+          <span style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--green)' }}>${computeNet(salaryForm).toLocaleString()}</span>
+        </div>
+      </Modal>
+
+      {/* Delete Confirm Modal */}
+      <Modal open={!!deleteConfirmModal} onClose={() => setDeleteConfirmModal(null)} title="Confirm Employee Removal" size="sm"
+        footer={<><button className="btn btn-outline" onClick={() => setDeleteConfirmModal(null)}>Cancel</button><button className="btn btn-danger" onClick={handleDeleteEmployee}><Trash2 size={14} /> Confirm Delete</button></>}>
+        <p style={{ fontSize: '.9rem', color: 'var(--text-2)' }}>
+          Are you sure you want to delete employee <strong>{deleteConfirmModal?.name}</strong> ({deleteConfirmModal?.employeeId})? This action cannot be undone.
+        </p>
       </Modal>
     </div>
   );
