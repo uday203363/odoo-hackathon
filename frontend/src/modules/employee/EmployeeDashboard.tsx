@@ -7,31 +7,49 @@ import {
 } from 'lucide-react';
 import { getCurrentGPSLocation, type GPSCoords } from '../../utils/geoUtils';
 
+function parseCheckInToDate(str: string): Date | null {
+  if (!str) return null;
+  const clean = str.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+  
+  if (clean.includes('T')) {
+    const d = new Date(clean);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  const match = clean.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)?$/i);
+  if (match) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const seconds = match[3] ? parseInt(match[3], 10) : 0;
+    const period = match[4] ? match[4].toUpperCase() : null;
+
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+
+    const d = new Date();
+    d.setHours(hours, minutes, seconds, 0);
+    return d;
+  }
+
+  return null;
+}
+
 const LiveTimer: React.FC<{ checkInTimeString: string }> = React.memo(({ checkInTimeString }) => {
   const [displayTime, setDisplayTime] = useState('00:00:00');
 
   useEffect(() => {
     const update = () => {
-      try {
-        const cleanStr = checkInTimeString.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-        const parts = cleanStr.split(' ');
-        const time = parts[0];
-        const period = parts[1] ? parts[1].toUpperCase() : null;
-        let [h, m] = time.split(':').map(Number);
-        if (period === 'PM' && h < 12) h += 12;
-        if (period === 'AM' && h === 12) h = 0;
-
-        const checkInTime = new Date();
-        checkInTime.setHours(h || 0, m || 0, 0, 0);
-
-        const diff = Math.max(0, Math.floor((Date.now() - checkInTime.getTime()) / 1000));
-        const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
-        const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-        const secs = String(diff % 60).padStart(2, '0');
-        setDisplayTime(`${hrs}:${mins}:${secs}`);
-      } catch {
+      const checkInDate = parseCheckInToDate(checkInTimeString);
+      if (!checkInDate) {
         setDisplayTime('00:00:00');
+        return;
       }
+
+      const diff = Math.max(0, Math.floor((Date.now() - checkInDate.getTime()) / 1000));
+      const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+      const secs = String(diff % 60).padStart(2, '0');
+      setDisplayTime(`${hrs}:${mins}:${secs}`);
     };
 
     update();
@@ -40,6 +58,35 @@ const LiveTimer: React.FC<{ checkInTimeString: string }> = React.memo(({ checkIn
   }, [checkInTimeString]);
 
   const [hrs, mins, secs] = displayTime.split(':');
+  const hDigits = (hrs || '00').padStart(2, '0').split('');
+  const mDigits = (mins || '00').padStart(2, '0').split('');
+  const sDigits = (secs || '00').padStart(2, '0').split('');
+
+  const renderDigitTile = (digit: string, key: string, isAccent = false) => (
+    <div
+      key={key}
+      style={{
+        width: '32px',
+        height: '42px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--surface)',
+        border: '1px solid var(--border-strong)',
+        borderRadius: '6px',
+        fontSize: '1.45rem',
+        fontWeight: 800,
+        fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+        color: isAccent ? 'var(--accent)' : 'var(--primary)',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+        userSelect: 'none',
+        flexShrink: 0,
+        boxSizing: 'border-box',
+      }}
+    >
+      {digit}
+    </div>
+  );
 
   return (
     <div
@@ -47,9 +94,9 @@ const LiveTimer: React.FC<{ checkInTimeString: string }> = React.memo(({ checkIn
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '.6rem',
+        gap: '.35rem',
         background: 'var(--surface-2)',
-        padding: '.6rem 1.25rem',
+        padding: '.6rem 1rem',
         borderRadius: 'var(--r-md)',
         border: '1px solid var(--border-strong)',
         boxShadow: 'var(--shadow-xs)',
@@ -57,25 +104,31 @@ const LiveTimer: React.FC<{ checkInTimeString: string }> = React.memo(({ checkIn
         userSelect: 'none',
       }}
     >
-      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 0 3px var(--green-bg)', flexShrink: 0 }} />
-
-      <div
+      <span
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '.25rem',
-          fontFamily: 'var(--font)',
-          fontWeight: 800,
-          fontSize: '1.8rem',
-          color: 'var(--primary)',
-          lineHeight: 1,
+          width: 8,
+          height: 8,
+          borderRadius: '50%',
+          background: 'var(--green)',
+          boxShadow: '0 0 0 3px var(--green-bg)',
+          marginRight: '.25rem',
+          flexShrink: 0,
         }}
-      >
-        <span style={{ minWidth: '42px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', display: 'inline-block' }}>{hrs}</span>
-        <span style={{ color: 'var(--text-4)', fontSize: '1.4rem', marginTop: '-2px' }}>:</span>
-        <span style={{ minWidth: '42px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', display: 'inline-block' }}>{mins}</span>
-        <span style={{ color: 'var(--text-4)', fontSize: '1.4rem', marginTop: '-2px' }}>:</span>
-        <span style={{ minWidth: '42px', textAlign: 'center', fontVariantNumeric: 'tabular-nums', display: 'inline-block', color: 'var(--accent)' }}>{secs}</span>
+      />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem' }}>
+        {renderDigitTile(hDigits[0], 'h0')}
+        {renderDigitTile(hDigits[1], 'h1')}
+
+        <span style={{ color: 'var(--text-4)', fontWeight: 800, fontSize: '1.2rem', padding: '0 2px', userSelect: 'none' }}>:</span>
+
+        {renderDigitTile(mDigits[0], 'm0')}
+        {renderDigitTile(mDigits[1], 'm1')}
+
+        <span style={{ color: 'var(--text-4)', fontWeight: 800, fontSize: '1.2rem', padding: '0 2px', userSelect: 'none' }}>:</span>
+
+        {renderDigitTile(sDigits[0], 's0', true)}
+        {renderDigitTile(sDigits[1], 's1', true)}
       </div>
     </div>
   );
