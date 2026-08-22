@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { ShieldCheck, User, Lock, Mail, ArrowRight, AlertCircle, Info, Key } from 'lucide-react';
+import { ShieldCheck, User, Lock, Mail, ArrowRight, AlertCircle, Info, Key, ShieldAlert, UserCheck } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useApp();
@@ -26,10 +26,16 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handleQuickFill = (emailVal: string, passVal: string) => {
+    setIdentifier(emailVal);
+    setPassword(passVal);
+    setError('');
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #12101a 0%, #2d1f3d 40%, #714b67 100%)',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 40%, #714b67 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -38,7 +44,7 @@ export const LoginPage: React.FC = () => {
     }}>
       <div style={{
         width: '100%',
-        maxWidth: 460,
+        maxWidth: 500,
         background: 'rgba(255, 255, 255, 0.96)',
         backdropFilter: 'blur(16px)',
         borderRadius: 'var(--r-xl)',
@@ -72,7 +78,7 @@ export const LoginPage: React.FC = () => {
             </svg>
           </div>
           <h1 style={{ fontSize: '1.65rem', fontWeight: 800, letterSpacing: '-.5px' }}>Dayflow <span style={{ color: 'var(--accent)' }}>HRMS</span></h1>
-          <p style={{ fontSize: '.88rem', opacity: 0.85, marginTop: '.25rem' }}>Sign in to your HR or Employee Portal</p>
+          <p style={{ fontSize: '.88rem', opacity: 0.85, marginTop: '.25rem' }}>Select Role & Sign In to Super Admin, HR, or Employee Portal</p>
         </div>
 
         {/* Login Form */}
@@ -104,7 +110,7 @@ export const LoginPage: React.FC = () => {
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="e.g. hr@dayflow.com or EMP-102"
+                  placeholder="superadmin@dayflow.com, hr@dayflow.com, or EMP-106"
                   value={identifier}
                   onChange={e => setIdentifier(e.target.value)}
                   autoFocus
@@ -136,32 +142,53 @@ export const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Credentials Info Guide */}
+          {/* 3 Portal Quick Select Buttons */}
           <div style={{
-            marginTop: '1.75rem',
+            marginTop: '1.5rem',
             background: 'var(--surface-2)',
             border: '1px solid var(--border)',
             borderRadius: 'var(--r-md)',
             padding: '1rem',
             fontSize: '.8rem'
           }}>
-            <div style={{ fontWeight: 800, color: 'var(--text-1)', marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
-              <Key size={14} color="var(--primary)" /> Portal Login Credentials
+            <div style={{ fontWeight: 800, color: 'var(--text-1)', marginBottom: '.65rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+              <Key size={14} color="var(--primary)" /> 3 Separate Dashboard Accounts (Click to Fill)
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem', color: 'var(--text-2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed var(--border)', paddingBottom: '.3rem' }}>
-                <span><strong>HR Admin:</strong> hr@dayflow.com</span>
-                <span style={{ color: 'var(--primary)', fontWeight: 700 }}>admin@123</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '.1rem' }}>
-                <span><strong>Employees:</strong> alex.m@dayflow.com / EMP-102</span>
-                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>join@123</span>
-              </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+              {/* 1. Super Admin Button */}
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => handleQuickFill('superadmin@dayflow.com', 'admin@123')}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textTransform: 'none', textAlign: 'left', borderColor: '#4f46e5', background: 'rgba(79, 70, 229, 0.05)' }}
+              >
+                <span>👑 <strong>1. Super Admin Dashboard:</strong> superadmin@dayflow.com</span>
+                <span style={{ color: '#4f46e5', fontWeight: 800 }}>admin@123</span>
+              </button>
+
+              {/* 2. HR Officer (Elena Rostova) Button */}
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => handleQuickFill('hr@dayflow.com', 'admin@123')}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textTransform: 'none', textAlign: 'left', borderColor: 'var(--primary-mid)' }}
+              >
+                <span>🛡️ <strong>2. HR Officer (Elena Rostova):</strong> hr@dayflow.com</span>
+                <span style={{ color: 'var(--primary)', fontWeight: 800 }}>admin@123</span>
+              </button>
+
+              {/* 3. Employee Button */}
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => handleQuickFill('uday@dayflow.com', 'join@123')}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', textTransform: 'none', textAlign: 'left' }}
+              >
+                <span>👤 <strong>3. Employee Dashboard:</strong> uday@dayflow.com</span>
+                <span style={{ color: 'var(--accent)', fontWeight: 800 }}>join@123</span>
+              </button>
             </div>
-            <p style={{ fontSize: '.72rem', color: 'var(--text-4)', marginTop: '.5rem', textAlign: 'center' }}>
-              Employees can change their password anytime after signing in.
-            </p>
           </div>
         </div>
       </div>

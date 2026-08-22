@@ -4,6 +4,41 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
+// Helper to safely parse time strings (e.g. "08:45 AM", "09:30:15 AM", "14:20") into decimal hours
+export function parseHours(timeStr: string): number {
+  if (!timeStr) return 0;
+  try {
+    // Sanitize non-breaking spaces (\u00a0) and extra whitespace
+    const cleanStr = timeStr.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+    const parts = cleanStr.split(' ');
+    const timeParts = parts[0].split(':').map(Number);
+    let hours = timeParts[0] || 0;
+    const minutes = timeParts[1] || 0;
+    const period = parts[1] ? parts[1].toUpperCase() : null;
+
+    if (period === 'PM' && hours < 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+
+    return hours + (minutes / 60);
+  } catch {
+    return 0;
+  }
+}
+
+export function calculateWorkHours(checkInStr: string, checkOutStr: string): number {
+  if (!checkInStr || !checkOutStr) return 0;
+  const inHours = parseHours(checkInStr);
+  let outHours = parseHours(checkOutStr);
+
+  if (outHours < inHours) {
+    outHours += 24;
+  }
+
+  let diff = outHours - inHours;
+  if (diff <= 0 || isNaN(diff)) return 0;
+  return Math.round(diff * 10) / 10;
+}
+
 // GET /api/attendance?date=YYYY-MM-DD&employeeId=EMP-XXX
 router.get('/', (req: Request, res: Response) => {
   let records = readDB<any>('attendance');
@@ -13,16 +48,16 @@ router.get('/', (req: Request, res: Response) => {
   res.json({ success: true, data: records });
 });
 
-// POST /api/attendance/checkin — Supports Campus or WFH mode with custom location
+// POST /api/attendance/checkin — Accepts Campus or WFH mode with custom/GPS location
 router.post('/checkin', (req: Request, res: Response) => {
-  const { employeeId, employeeName, location, mode, overrideCampus } = req.body;
+  const { employeeId, employeeName, location, mode } = req.body;
   const today = new Date().toISOString().split('T')[0];
   const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   const records = readDB<any>('attendance');
   const existing = records.find((r: any) => r.employeeId === employeeId && r.date === today);
 
-  if (existing?.checkIn) {
+  if (existing?.checkIn && !existing.checkOut) {
     return res.status(400).json({ success: false, message: 'Already checked in today' });
   }
 
@@ -32,25 +67,26 @@ router.post('/checkin', (req: Request, res: Response) => {
     (w: any) => w.employeeId === employeeId && w.date === today && w.status === 'Approved'
   );
 
-  const isWFH = mode === 'wfh' || !!approvedWFH;
+  const locLower = (location || '').toLowerCase();
+  const isWFH = mode === 'wfh' || !!approvedWFH || locLower.includes('home') || locLower.includes('wfh') || locLower.includes('remote');
   const finalStatus = isWFH ? 'WFH' : 'Present';
-  const finalLocation = location || (isWFH ? 'Remote (WFH)' : 'Main HQ Campus');
+  const finalLocation = location || (isWFH ? 'Work From Home' : 'Main HQ Campus');
 
   if (existing) {
     const updated = updateOne('attendance', existing.id, {
-      checkIn: time, status: finalStatus, location: finalLocation, isWFH
+      checkIn: time, checkOut: null, workHours: 0, status: finalStatus, location: finalLocation, isWFH
     });
     return res.json({
       success: true,
       data: updated,
-      message: isWFH ? `Checked in (WFH - ${finalLocation}) at ${time}` : `Checked in at ${finalLocation} (${time})`
+      message: `Checked in successfully at ${time} (${finalLocation})`
     });
   }
 
   const record = {
     id: `att-${uuidv4()}`,
     employeeId,
-    employeeName,
+    employeeName: employeeName || 'Employee',
     date: today,
     checkIn: time,
     checkOut: null,
@@ -67,7 +103,7 @@ router.post('/checkin', (req: Request, res: Response) => {
   res.json({
     success: true,
     data: record,
-    message: isWFH ? `Checked in (WFH - ${finalLocation}) at ${time}` : `Checked in at ${finalLocation} (${time})`
+    message: `Checked in successfully at ${time} (${finalLocation})`
   });
 });
 
@@ -79,25 +115,53 @@ router.post('/checkout', (req: Request, res: Response) => {
   const records = readDB<any>('attendance');
   const record = records.find((r: any) => r.employeeId === employeeId && r.date === today);
 
-  if (!record?.checkIn) return res.status(400).json({ success: false, message: 'Not checked in yet' });
-  if (record.checkOut) return res.status(400).json({ success: false, message: 'Already checked out' });
+  if (!record?.checkIn) {
+    return res.status(400).json({ success: false, message: 'Not checked in yet' });
+  }
 
-  const parseTime = (t: string) => {
-    const [tStr, period] = t.split(' ');
-    let [h, m] = tStr.split(':').map(Number);
-    if (period === 'PM' && h < 12) h += 12;
-    if (period === 'AM' && h === 12) h = 0;
-    return h + m / 60;
-  };
-  const workHours = Math.max(0, parseTime(time) - parseTime(record.checkIn));
+  if (record.checkOut) {
+    return res.status(400).json({ success: false, message: 'Already checked out today' });
+  }
 
-  const updated = updateOne('attendance', record.id, { checkOut: time, workHours: Math.round(workHours * 10) / 10 });
-  res.json({ success: true, data: updated, message: `Checked out at ${time}. ${workHours.toFixed(1)}h logged.` });
+  const loggedHours = calculateWorkHours(record.checkIn, time);
+
+  const updated = updateOne('attendance', record.id, {
+    checkOut: time,
+    workHours: loggedHours
+  });
+
+  res.json({
+    success: true,
+    data: updated,
+    message: `Checked out successfully at ${time}. ${loggedHours} hours logged.`
+  });
+});
+
+// DELETE /api/attendance/reset — Reset today's attendance record for an employee
+router.delete('/reset', (req: Request, res: Response) => {
+  const { employeeId, date } = req.query;
+  const records = readDB<any>('attendance');
+  const filtered = records.filter(
+    (r: any) => !(r.employeeId === String(employeeId) && r.date === String(date))
+  );
+  writeDB('attendance', filtered);
+  res.json({ success: true, message: 'Attendance reset successfully' });
 });
 
 // PUT /api/attendance/:id — admin edit
 router.put('/:id', (req: Request, res: Response) => {
-  const updated = updateOne('attendance', String(req.params.id), req.body);
+  const existing = readDB<any>('attendance').find((r: any) => r.id === String(req.params.id));
+  let updateData = { ...req.body };
+
+  if (updateData.checkIn || updateData.checkOut) {
+    const finalIn = updateData.checkIn || existing?.checkIn;
+    const finalOut = updateData.checkOut || existing?.checkOut;
+    if (finalIn && finalOut) {
+      updateData.workHours = calculateWorkHours(finalIn, finalOut);
+    }
+  }
+
+  const updated = updateOne('attendance', String(req.params.id), updateData);
   if (!updated) return res.status(404).json({ success: false, message: 'Record not found' });
   res.json({ success: true, data: updated });
 });

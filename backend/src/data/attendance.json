@@ -1,14 +1,26 @@
 [
   {
-    "id": "att-6a390c8c-b566-41f7-a333-b5b9ab3ef7de",
-    "employeeId": "EMP-107",
-    "employeeName": "sagar",
+    "id": "att-e43ab047-6814-4ff9-afca-0357c315efe8",
+    "employeeId": "EMP-105",
+    "employeeName": "Priya Patel",
     "date": "2026-08-22",
-    "checkIn": "11:08 AM",
+    "checkIn": "02:51 PM",
     "checkOut": null,
     "workHours": 0,
     "status": "Present",
-    "location": "Main HQ",
+    "location": "Pappanchathiram, Poonamallee, Thiruvallur, Tamil Nadu, 600124, India",
+    "isWFH": false
+  },
+  {
+    "id": "att-6f1afaa1-ec4f-4e0f-8367-9d7854160f7a",
+    "employeeId": "EMP-00",
+    "employeeName": "Super Admin",
+    "date": "2026-08-22",
+    "checkIn": "12:33 PM",
+    "checkOut": null,
+    "workHours": 0,
+    "status": "Present",
+    "location": "Pappanchathiram, Poonamallee, திருவள்ளூர் மாவட்டம், Tamil Nadu, 600124, India",
     "isWFH": false
   },
   {
@@ -57,22 +69,33 @@
     "location": "Main HQ"
   },
   {
-    "id": "att-t5",
-    "employeeId": "EMP-105",
-    "employeeName": "Priya Patel",
+    "id": "att-t6",
+    "employeeId": "EMP-106",
+    "employeeName": "R.Uday kumar reddy",
     "date": "2026-08-22",
-    "checkIn": "08:55 AM",
+    "checkIn": "09:10 AM",
+    "checkOut": "02:48 PM",
+    "workHours": 5.6,
+    "status": "Present",
+    "location": "Main HQ"
+  },
+  {
+    "id": "att-t7",
+    "employeeId": "EMP-107",
+    "employeeName": "sagar",
+    "date": "2026-08-22",
+    "checkIn": "09:15 AM",
     "checkOut": null,
     "workHours": 0,
     "status": "Present",
     "location": "Main HQ"
   },
   {
-    "id": "att-t6",
-    "employeeId": "EMP-106",
-    "employeeName": "R.Uday kumar reddy",
+    "id": "att-t8",
+    "employeeId": "EMP-108",
+    "employeeName": "Michael Scott",
     "date": "2026-08-22",
-    "checkIn": "09:10 AM",
+    "checkIn": "08:50 AM",
     "checkOut": null,
     "workHours": 0,
     "status": "Present",

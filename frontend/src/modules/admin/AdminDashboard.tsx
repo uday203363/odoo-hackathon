@@ -4,15 +4,18 @@ import { getBadgeClass, Modal } from '../../ui/components/common';
 import {
   Users, Clock, CalendarDays, DollarSign, CheckCircle2, XCircle,
   ArrowRight, TrendingUp, UserPlus, AlertTriangle, ShieldCheck, Eye,
-  Megaphone, Ticket, BarChart3, Target
+  Megaphone, Ticket, BarChart3, Target, LogIn, LogOut, MapPin, Building2, Home, UserCheck, ShieldAlert, Edit3
 } from 'lucide-react';
+import type { User } from '../../types';
 
 export const AdminDashboard: React.FC = () => {
-  const { users, attendance, leaveRequests, wfhRequests, payroll, announcements, tickets, compliance,
-    reviewLeave, reviewWFH, setActiveTab, setSelectedEmployee } = useApp();
+  const { users, attendance, leaveRequests, wfhRequests, payroll, announcements, tickets, compliance, currentUser,
+    reviewLeave, reviewWFH, setActiveTab, setSelectedEmployee, checkIn, checkOut, companyLocation, hasApprovedWFHToday, updateProfile } = useApp();
 
   const [reviewModal, setReviewModal] = useState<{ item: any; type: 'leave' | 'wfh' } | null>(null);
   const [comments, setComments] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'employee'>('all');
+  const [roleToggleConfirm, setRoleToggleConfirm] = useState<User | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
   const todayAtt = attendance.filter(a => a.date === today);
@@ -24,11 +27,34 @@ export const AdminDashboard: React.FC = () => {
   const overdueCompliance = compliance.filter(c => c.status === 'Overdue').length;
   const openTickets = tickets.filter(t => t.status === 'Open').length;
 
+  const hrTodayRec = attendance.find(a => a.employeeId === currentUser.employeeId && a.date === today);
+
+  const filteredWorkforce = users.filter(u => {
+    if (roleFilter === 'admin') return u.role === 'admin';
+    if (roleFilter === 'employee') return u.role === 'employee';
+    return true;
+  });
+
+  const hrCount = users.filter(u => u.role === 'admin').length;
+  const empCount = users.filter(u => u.role === 'employee').length;
+
   const handleConfirmReview = (status: 'Approved' | 'Rejected') => {
     if (!reviewModal) return;
     if (reviewModal.type === 'leave') reviewLeave(reviewModal.item.id, status, comments || `${status} by HR`);
     else reviewWFH(reviewModal.item.id, status, comments);
     setReviewModal(null); setComments('');
+  };
+
+  const handleToggleRole = () => {
+    if (roleToggleConfirm) {
+      const newRole = roleToggleConfirm.role === 'admin' ? 'employee' : 'admin';
+      updateProfile(roleToggleConfirm.id, { role: newRole });
+      setRoleToggleConfirm(null);
+    }
+  };
+
+  const handleHRCheckIn = () => {
+    setActiveTab('attendance');
   };
 
   return (
@@ -38,14 +64,35 @@ export const AdminDashboard: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div className="banner-tag"><ShieldCheck size={13} /> HR EXECUTIVE COMMAND CENTER</div>
-            <h2>Welcome, {useApp().currentUser.name.split(' ')[0]} 👋</h2>
+            <h2>Welcome, {currentUser.name.split(' ')[0]} 👋</h2>
             <p>Real-time workforce metrics, pending approvals, and compliance status at a glance.</p>
           </div>
-          <div style={{ display: 'flex', gap: '.65rem', flexWrap: 'wrap' }}>
-            <button className="btn btn-accent" onClick={() => setActiveTab('employees')}><UserPlus size={15} /> Add Employee</button>
-            <button className="btn btn-outline" style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff' }} onClick={() => setActiveTab('analytics')}>
-              <BarChart3 size={15} /> Analytics
-            </button>
+          
+          <div style={{ display: 'flex', gap: '.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* HR Personal Check-In / Check-Out Widget */}
+            <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(10px)', padding: '.5rem .85rem', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', gap: '.65rem', border: '1px solid rgba(255,255,255,0.25)' }}>
+              <div>
+                <div style={{ fontSize: '.7rem', color: 'rgba(255,255,255,0.8)', fontWeight: 700, textTransform: 'uppercase' }}>
+                  HR Today's Shift
+                </div>
+                <div style={{ fontSize: '.83rem', fontWeight: 800, color: '#fff' }}>
+                  {hrTodayRec?.checkIn ? `Checked In (${hrTodayRec.checkIn})` : 'Not Checked In'}
+                </div>
+              </div>
+
+              {!hrTodayRec?.checkIn && (
+                <button className="btn btn-accent btn-sm" onClick={handleHRCheckIn}>
+                  <LogIn size={14} /> Check In HR
+                </button>
+              )}
+              {hrTodayRec?.checkIn && !hrTodayRec.checkOut && (
+                <button className="btn btn-danger btn-sm" onClick={checkOut}>
+                  <LogOut size={14} /> Check Out HR
+                </button>
+              )}
+            </div>
+
+            <button className="btn btn-outline" style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', color: '#fff' }} onClick={() => setActiveTab('employees')}><UserPlus size={15} /> Add Employee</button>
           </div>
         </div>
       </div>
@@ -53,7 +100,7 @@ export const AdminDashboard: React.FC = () => {
       {/* KPI Cards */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div><div className="stat-num">{users.length}</div><div className="stat-label">Total Employees</div></div>
+          <div><div className="stat-num">{users.length}</div><div className="stat-label">Total Staff ({hrCount} HR / {empCount} Emp)</div></div>
           <div className="stat-icon"><Users size={22} /></div>
         </div>
         <div className="stat-card teal">
@@ -120,7 +167,9 @@ export const AdminDashboard: React.FC = () => {
               <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '.5rem', padding: '.6rem .75rem', borderRadius: 'var(--r-md)', background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
                 <img src={u.avatar} alt="" style={{ width: 30, height: 30, borderRadius: '50%', objectFit: 'cover' }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: '.82rem' }}>{u.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: '.82rem' }}>
+                    {u.name} {u.id === currentUser.id && <span style={{ fontSize: '.68rem', color: 'var(--primary)', fontWeight: 800 }}>(You - HR)</span>}
+                  </div>
                   <div style={{ fontSize: '.72rem', color: 'var(--text-3)' }}>{u.designation}</div>
                 </div>
                 <span className={getBadgeClass(status)} style={{ fontSize: '.7rem' }}>{status}</span>
@@ -129,93 +178,82 @@ export const AdminDashboard: React.FC = () => {
             );
           })}
         </div>
-
-        {/* Announcements */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title"><Megaphone size={18} color="var(--purple)" /> Announcements</h3>
-            <button className="btn btn-outline btn-sm" onClick={() => setActiveTab('announcements')}>Manage <ArrowRight size={13} /></button>
-          </div>
-          {announcements.slice(0, 3).map(a => (
-            <div key={a.id} className="ann-card">
-              <div className={`ann-priority ${a.priority}`} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
-                  <strong style={{ fontSize: '.87rem' }}>{a.title}</strong>
-                  <span className={getBadgeClass(a.priority)} style={{ fontSize: '.68rem' }}>{a.priority}</span>
-                </div>
-                <p style={{ fontSize: '.78rem', color: 'var(--text-3)', marginTop: '.25rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.content}</p>
-                <p style={{ fontSize: '.7rem', color: 'var(--text-4)', marginTop: '.3rem' }}>{a.postedOn} · {a.readBy.length} read</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Compliance Alerts + Open Tickets */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title"><AlertTriangle size={18} color="var(--red)" /> Compliance Alerts & Tickets</h3>
-            <div style={{ display: 'flex', gap: '.5rem' }}>
-              <button className="btn btn-outline btn-sm" onClick={() => setActiveTab('compliance')}>Compliance</button>
-              <button className="btn btn-outline btn-sm" onClick={() => setActiveTab('tickets')}>Tickets</button>
-            </div>
-          </div>
-          {compliance.filter(c => c.status !== 'Done').slice(0, 3).map(c => (
-            <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.65rem .85rem', background: c.status === 'Overdue' ? 'var(--red-bg)' : 'var(--yellow-bg)', borderRadius: 'var(--r-md)', marginBottom: '.5rem', border: `1px solid ${c.status === 'Overdue' ? '#fecaca' : '#fef08a'}` }}>
-              <AlertTriangle size={16} color={c.status === 'Overdue' ? 'var(--red)' : 'var(--yellow)'} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '.82rem' }}>{c.employeeName} — {c.type}</div>
-                <div style={{ fontSize: '.73rem', color: 'var(--text-3)' }}>Due: {c.dueDate}</div>
-              </div>
-              <span className={getBadgeClass(c.status)}>{c.status}</span>
-            </div>
-          ))}
-          <div style={{ marginTop: '.75rem', borderTop: '1px solid var(--border)', paddingTop: '.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '.85rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '.5rem' }}>
-              <span><Ticket size={14} style={{ marginRight: 6 }} />Open Tickets ({openTickets})</span>
-            </div>
-            {tickets.filter(t => t.status === 'Open').slice(0, 2).map(t => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.55rem .75rem', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)', background: 'var(--surface-2)', marginBottom: '.4rem' }}>
-                <img src={t.employeeAvatar} alt="" style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }} />
-                <div style={{ flex: 1, fontSize: '.8rem' }}><strong>{t.subject}</strong> <span style={{ color: 'var(--text-3)' }}>— {t.employeeName}</span></div>
-                <span className={getBadgeClass(t.priority)} style={{ fontSize: '.68rem' }}>{t.priority}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* Workforce Table */}
+      {/* Admin HR & Employee Role Management Table */}
       <div className="card" style={{ marginTop: '1.25rem' }}>
-        <div className="card-header">
-          <h3 className="card-title"><Users size={18} color="var(--primary)" /> Workforce Overview</h3>
-          <button className="btn btn-outline btn-sm" onClick={() => setActiveTab('employees')}>Manage All <ArrowRight size={13} /></button>
+        <div className="card-header" style={{ flexWrap: 'wrap', gap: '.5rem' }}>
+          <div>
+            <h3 className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ShieldCheck size={18} color="var(--primary)" /> HR & Employee Role Control Panel
+            </h3>
+            <p className="card-subtitle">Maintain roles, permissions, and status for HR Officers and Employees.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '.4rem' }}>
+            <button className={`btn btn-sm ${roleFilter === 'all' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setRoleFilter('all')}>
+              All ({users.length})
+            </button>
+            <button className={`btn btn-sm ${roleFilter === 'admin' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setRoleFilter('admin')}>
+              HR Admins ({hrCount})
+            </button>
+            <button className={`btn btn-sm ${roleFilter === 'employee' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setRoleFilter('employee')}>
+              Employees ({empCount})
+            </button>
+          </div>
         </div>
+
         <div className="table-wrap">
           <table className="data-table">
-            <thead><tr><th>Employee</th><th>Department</th><th>Status</th><th>Today</th><th>Paid Leave Left</th><th>Goals</th><th>Action</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Employee / HR</th>
+                <th>Role</th>
+                <th>Department</th>
+                <th>Designation</th>
+                <th>Status</th>
+                <th>Actions & Role Management</th>
+              </tr>
+            </thead>
             <tbody>
-              {users.map(u => {
-                const todayS = todayAtt.find(a => a.employeeId === u.employeeId)?.status || 'Absent';
-                const goalsCount = (u.goals || []).length;
-                const completedGoals = (u.goals || []).filter(g => g.status === 'Completed').length;
+              {filteredWorkforce.map(u => {
+                const isHR = u.role === 'admin';
+                const isSelf = u.id === currentUser.id;
                 return (
-                  <tr key={u.id}>
+                  <tr key={u.id} style={isSelf ? { background: 'var(--primary-light)' } : undefined}>
                     <td>
                       <div className="emp-cell">
                         <img src={u.avatar} alt="" className="emp-avatar" />
-                        <div><div className="emp-name">{u.name}</div><div className="emp-sub">{u.employeeId}</div></div>
+                        <div>
+                          <div className="emp-name">
+                            {u.name} {isSelf && <span style={{ fontSize: '.7rem', color: 'var(--primary)', fontWeight: 800 }}>(You)</span>}
+                          </div>
+                          <div className="emp-sub">{u.employeeId} · {u.email}</div>
+                        </div>
                       </div>
                     </td>
-                    <td>{u.departmentName}</td>
-                    <td><span className={getBadgeClass(u.employmentStatus)}>{u.employmentStatus}</span></td>
-                    <td><span className={getBadgeClass(todayS)} style={{ fontSize: '.72rem' }}>{todayS}</span></td>
-                    <td><strong>{u.leaveBalances.paid}</strong> days</td>
-                    <td>{goalsCount > 0 ? <span style={{ fontSize: '.8rem' }}>{completedGoals}/{goalsCount} done</span> : <span style={{ color: 'var(--text-4)', fontSize: '.8rem' }}>None</span>}</td>
                     <td>
-                      <button className="btn btn-outline btn-sm" onClick={() => { setSelectedEmployee(u); setActiveTab('employees'); }}>
-                        <Eye size={13} /> View
-                      </button>
+                      <span className={`badge ${isHR ? 'badge-urgent' : 'badge-active'}`} style={{ fontSize: '.72rem' }}>
+                        {isHR ? '🛡️ HR Officer / Admin' : '👤 Employee'}
+                      </span>
+                    </td>
+                    <td>{u.departmentName}</td>
+                    <td>{u.designation}</td>
+                    <td><span className={getBadgeClass(u.employmentStatus)}>{u.employmentStatus}</span></td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '.4rem', alignItems: 'center' }}>
+                        <button className="btn btn-outline btn-sm" onClick={() => { setSelectedEmployee(u); setActiveTab('employees'); }}>
+                          <Eye size={13} /> Profile
+                        </button>
+                        {!isSelf && (
+                          <button
+                            className={`btn btn-sm ${isHR ? 'btn-outline' : 'btn-accent'}`}
+                            onClick={() => setRoleToggleConfirm(u)}
+                            style={{ fontSize: '.73rem' }}
+                          >
+                            {isHR ? 'Demote to Employee' : 'Promote to HR Admin'}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -224,6 +262,31 @@ export const AdminDashboard: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Role Toggle Confirm Modal */}
+      <Modal open={!!roleToggleConfirm} onClose={() => setRoleToggleConfirm(null)} title="Change Role & Permissions" size="sm"
+        footer={
+          <>
+            <button className="btn btn-outline" onClick={() => setRoleToggleConfirm(null)}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleToggleRole}>Confirm Role Change</button>
+          </>
+        }
+      >
+        {roleToggleConfirm && (
+          <div>
+            <p style={{ fontSize: '.88rem', color: 'var(--text-2)' }}>
+              Are you sure you want to change <strong>{roleToggleConfirm.name}</strong>'s role from{' '}
+              <strong>{roleToggleConfirm.role === 'admin' ? 'HR Officer / Admin' : 'Employee'}</strong> to{' '}
+              <strong style={{ color: 'var(--primary)' }}>{roleToggleConfirm.role === 'admin' ? 'Employee' : 'HR Officer / Admin'}</strong>?
+            </p>
+            <p style={{ fontSize: '.78rem', color: 'var(--text-3)', marginTop: '.5rem' }}>
+              {roleToggleConfirm.role === 'employee'
+                ? 'Promoting to HR Admin will grant full system access, approval authority, and workforce management tools.'
+                : 'Demoting to Employee will restrict access to standard Employee Self-Service.'}
+            </p>
+          </div>
+        )}
+      </Modal>
 
       {/* Review Modal */}
       <Modal open={!!reviewModal} onClose={() => setReviewModal(null)} title="Review Request"

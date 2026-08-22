@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { readDB, writeDB, updateOne } from '../db/db';
+import { readDB, writeDB } from '../db/db';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-// Helper to generate next sequential Employee ID (e.g. EMP-106)
+// Helper to generate next sequential Employee ID (e.g. EMP-109)
 function generateNextEmpId(): string {
   const users = readDB<any>('users');
   let maxNum = 100;
@@ -27,7 +27,8 @@ router.get('/', (_req: Request, res: Response) => {
 router.post('/', (req: Request, res: Response) => {
   const {
     name, email, password = 'join@123', designation, departmentId, departmentName,
-    phone, address, joinDate, role = 'employee', basic = 4000, hra = 1600
+    phone, address, joinDate, birthDate, role = 'employee', basic = 4000, hra = 1600,
+    employeeId: reqEmpId
   } = req.body;
 
   if (!name || !email) {
@@ -35,12 +36,18 @@ router.post('/', (req: Request, res: Response) => {
   }
 
   const users = readDB<any>('users');
-  const existing = users.find((u: any) => u.email.toLowerCase() === String(email).toLowerCase());
-  if (existing) {
+  const cleanEmail = String(email).trim().toLowerCase();
+  const existingEmail = users.find((u: any) => u.email.toLowerCase() === cleanEmail);
+  if (existingEmail) {
     return res.status(400).json({ success: false, message: 'An employee with this email already exists.' });
   }
 
-  const employeeId = generateNextEmpId();
+  const employeeId = reqEmpId ? String(reqEmpId).trim() : generateNextEmpId();
+  const existingEmpId = users.find((u: any) => u.employeeId.toLowerCase() === employeeId.toLowerCase());
+  if (existingEmpId) {
+    return res.status(400).json({ success: false, message: `An employee with Employee ID '${employeeId}' already exists.` });
+  }
+
   const basicSalary = Number(basic) || 4000;
   const hraSalary = Number(hra) || 1600;
   const conveyance = 400;
@@ -56,8 +63,8 @@ router.post('/', (req: Request, res: Response) => {
   const newUser = {
     id: `usr-${uuidv4().slice(0, 8)}`,
     employeeId,
-    name,
-    email: String(email).trim(),
+    name: String(name).trim(),
+    email: cleanEmail,
     password: String(password || 'join@123').trim(),
     role: role || 'employee',
     avatar: `https://images.unsplash.com/photo-${1535713875002 + users.length * 100}?w=150&auto=format&fit=crop&q=80`,
@@ -67,6 +74,7 @@ router.post('/', (req: Request, res: Response) => {
     phone: phone || '+1 (555) 000-0000',
     address: address || 'San Francisco, CA',
     joinDate: joinDate || new Date().toISOString().split('T')[0],
+    birthDate: birthDate || '1995-01-01',
     employmentStatus: 'Active',
     leaveBalances: { paid: 15, sick: 10, unpaid: 0, casual: 5, maternity: 0, paternity: 0 },
     salary: {
@@ -80,12 +88,53 @@ router.post('/', (req: Request, res: Response) => {
   users.push(newUser);
   writeDB('users', users);
 
+  // Auto-generate current month payroll entry for new employee
+  const currentMonth = 'August 2026';
+  const payrollRecords = readDB<any>('payroll');
+  const newPayrollRecord = {
+    id: `pay-${employeeId}-${uuidv4().slice(0, 6)}`,
+    employeeId,
+    employeeName: name,
+    month: currentMonth,
+    basic: basicSalary,
+    hra: hraSalary,
+    conveyance,
+    specialAllowance,
+    medicalAllowance,
+    grossPay,
+    pfDeduction,
+    taxDeduction,
+    professionalTax,
+    totalDeductions,
+    netPay: netSalary,
+    paymentStatus: 'Paid',
+    paymentDate: new Date().toISOString().split('T')[0],
+    workingDays: 26,
+    presentDays: 25
+  };
+  payrollRecords.unshift(newPayrollRecord);
+  writeDB('payroll', payrollRecords);
+
   const { password: _pw, ...safeUser } = newUser;
   res.status(201).json({
     success: true,
     data: safeUser,
     message: `Employee ${name} added successfully with Employee ID: ${employeeId}`
   });
+});
+
+// DELETE /api/employees/:id — Delete employee record
+router.delete('/:id', (req: Request, res: Response) => {
+  const users = readDB<any>('users');
+  const targetId = req.params.id;
+  const filtered = users.filter((u: any) => u.id !== targetId && u.employeeId !== targetId);
+
+  if (filtered.length === users.length) {
+    return res.status(404).json({ success: false, message: 'Employee not found' });
+  }
+
+  writeDB('users', filtered);
+  res.json({ success: true, message: 'Employee deleted successfully' });
 });
 
 // PUT /api/employees/:id/password — Change Password Endpoint
@@ -99,7 +148,6 @@ router.put('/:id/password', (req: Request, res: Response) => {
   const idx = users.findIndex((u: any) => u.id === req.params.id || u.employeeId === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, message: 'Employee not found' });
 
-  // Verify current password if provided
   if (currentPassword && users[idx].password !== currentPassword) {
     return res.status(400).json({ success: false, message: 'Current password does not match.' });
   }
@@ -121,11 +169,11 @@ router.get('/:id', (req: Request, res: Response) => {
 // PUT /api/employees/:id — update profile
 router.put('/:id', (req: Request, res: Response) => {
   const users = readDB<any>('users');
-  const idx = users.findIndex((u: any) => u.id === req.params.id);
+  const idx = users.findIndex((u: any) => u.id === req.params.id || u.employeeId === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, message: 'Employee not found' });
   const updated = { ...users[idx], ...req.body, id: users[idx].id, employeeId: users[idx].employeeId };
   users[idx] = updated;
-  writeDB('users', users);
+  writeDB('users', updated);
   const { password: _pw, ...safe } = updated;
   res.json({ success: true, data: safe, message: 'Employee updated successfully' });
 });
@@ -133,7 +181,7 @@ router.put('/:id', (req: Request, res: Response) => {
 // PUT /api/employees/:id/salary — update salary structure
 router.put('/:id/salary', (req: Request, res: Response) => {
   const users = readDB<any>('users');
-  const idx = users.findIndex((u: any) => u.id === req.params.id);
+  const idx = users.findIndex((u: any) => u.id === req.params.id || u.employeeId === req.params.id);
   if (idx === -1) return res.status(404).json({ success: false, message: 'Employee not found' });
   const gross = req.body.basic + req.body.hra + req.body.conveyance + req.body.specialAllowance + (req.body.medicalAllowance || 0);
   const deductions = req.body.pfDeduction + req.body.taxDeduction + (req.body.professionalTax || 0);

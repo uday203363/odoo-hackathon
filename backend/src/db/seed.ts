@@ -4,6 +4,20 @@ const TODAY = new Date().toISOString().split('T')[0];
 
 const USERS = [
   {
+    id: 'usr-superadmin', employeeId: 'EMP-00', name: 'Super Admin', email: 'superadmin@dayflow.com',
+    password: 'admin@123', role: 'super_admin',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    designation: 'Chief Technology & Systems Officer', departmentId: 'dept-1', departmentName: 'People & Culture',
+    phone: '+1 (555) 000-1111', address: 'Global Headquarters, San Francisco, CA',
+    joinDate: '2019-01-01', birthDate: '1980-01-01', managerName: 'Board of Directors',
+    bio: 'Super Admin overseeing global HRMS systems, organizational structure, security & compliance.',
+    employmentStatus: 'Active', skills: ['System Architecture', 'Global HR', 'Security', 'Compliance'],
+    leaveBalances: { paid: 30, sick: 15, unpaid: 0, casual: 10, maternity: 0, paternity: 0 },
+    salary: { basic: 10000, hra: 4000, conveyance: 800, specialAllowance: 3000, medicalAllowance: 800, pfDeduction: 1200, taxDeduction: 2000, professionalTax: 200, netSalary: 15200 },
+    documents: [],
+    goals: [],
+  },
+  {
     id: 'usr-admin-1', employeeId: 'EMP-001', name: 'Elena Rostova', email: 'hr@dayflow.com',
     password: 'admin@123', role: 'admin',
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
@@ -95,6 +109,34 @@ const USERS = [
     documents: [],
     goals: [],
   },
+  {
+    id: 'usr-emp-6', employeeId: 'EMP-107', name: 'sagar', email: 'test@example.com',
+    password: 'join@123', role: 'employee',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    designation: 'Software Engineer', departmentId: 'dept-1', departmentName: 'People & Culture',
+    phone: '+1 (555) 555-0107', address: 'San Francisco, CA',
+    joinDate: '2024-03-01', birthDate: '1997-06-20', managerId: 'EMP-001', managerName: 'Elena Rostova',
+    bio: 'Software engineer focused on application testing and frontend systems.',
+    employmentStatus: 'Active', skills: ['React', 'TypeScript', 'Node.js'],
+    leaveBalances: { paid: 15, sick: 10, unpaid: 0, casual: 5, maternity: 0, paternity: 0 },
+    salary: { basic: 24000, hra: 9600, conveyance: 400, specialAllowance: 5000, medicalAllowance: 500, pfDeduction: 750, taxDeduction: 500, professionalTax: 200, netSalary: 38050 },
+    documents: [],
+    goals: [],
+  },
+  {
+    id: 'usr-emp-7', employeeId: 'EMP-108', name: 'Michael Scott', email: 'michael.s@dayflow.com',
+    password: 'join@123', role: 'employee',
+    avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=80',
+    designation: 'Regional Operations Lead', departmentId: 'dept-5', departmentName: 'Marketing',
+    phone: '+1 (555) 555-0108', address: 'Scranton / SF Branch, CA',
+    joinDate: '2024-03-15', birthDate: '1988-03-15', managerId: 'EMP-001', managerName: 'Elena Rostova',
+    bio: 'Operations and team manager passionate about workforce culture and team productivity.',
+    employmentStatus: 'Active', skills: ['Management', 'Operations', 'Leadership'],
+    leaveBalances: { paid: 15, sick: 10, unpaid: 0, casual: 5, maternity: 0, paternity: 0 },
+    salary: { basic: 5000, hra: 2000, conveyance: 400, specialAllowance: 1200, medicalAllowance: 400, pfDeduction: 600, taxDeduction: 900, professionalTax: 200, netSalary: 7300 },
+    documents: [],
+    goals: [],
+  },
 ];
 
 const DEPARTMENTS = [
@@ -112,18 +154,20 @@ const ATTENDANCE = [
   { id: 'att-t4', employeeId: 'EMP-104', employeeName: 'David Chen', date: TODAY, checkIn: '09:35 AM', checkOut: null, workHours: 0, status: 'Late', location: 'Main HQ' },
   { id: 'att-t5', employeeId: 'EMP-105', employeeName: 'Priya Patel', date: TODAY, checkIn: '08:55 AM', checkOut: null, workHours: 0, status: 'Present', location: 'Main HQ' },
   { id: 'att-t6', employeeId: 'EMP-106', employeeName: 'R.Uday kumar reddy', date: TODAY, checkIn: '09:10 AM', checkOut: null, workHours: 0, status: 'Present', location: 'Main HQ' },
+  { id: 'att-t7', employeeId: 'EMP-107', employeeName: 'sagar', date: TODAY, checkIn: '09:15 AM', checkOut: null, workHours: 0, status: 'Present', location: 'Main HQ' },
+  { id: 'att-t8', employeeId: 'EMP-108', employeeName: 'Michael Scott', date: TODAY, checkIn: '08:50 AM', checkOut: null, workHours: 0, status: 'Present', location: 'Main HQ' },
 ];
 
 const LEAVES = [
-  { id: 'lv-001', employeeId: 'EMP-102', employeeName: 'Alex Morgan', employeeAvatar: USERS[1].avatar, employeeDepartment: 'Engineering', leaveType: 'Paid', startDate: '2026-08-28', endDate: '2026-08-30', daysCount: 3, reason: 'Tech Summit in Austin.', status: 'Pending', appliedOn: '2026-08-20' },
-  { id: 'lv-002', employeeId: 'EMP-103', employeeName: 'Sarah Jenkins', employeeAvatar: USERS[2].avatar, employeeDepartment: 'Design', leaveType: 'Paid', startDate: '2026-08-22', endDate: '2026-08-24', daysCount: 3, reason: 'Family vacation.', status: 'Approved', appliedOn: '2026-08-15', adminComments: 'Approved! Have a great trip.', reviewedBy: 'Elena Rostova', reviewedOn: '2026-08-16' },
-  { id: 'lv-003', employeeId: 'EMP-104', employeeName: 'David Chen', employeeAvatar: USERS[3].avatar, employeeDepartment: 'Finance', leaveType: 'Sick', startDate: '2026-08-10', endDate: '2026-08-11', daysCount: 2, reason: 'Flu and medical rest.', status: 'Approved', appliedOn: '2026-08-10', adminComments: 'Get well soon!', reviewedBy: 'Elena Rostova', reviewedOn: '2026-08-10' },
-  { id: 'lv-004', employeeId: 'EMP-104', employeeName: 'David Chen', employeeAvatar: USERS[3].avatar, employeeDepartment: 'Finance', leaveType: 'Casual', startDate: '2026-09-05', endDate: '2026-09-08', daysCount: 4, reason: 'Apartment relocation.', status: 'Pending', appliedOn: '2026-08-21' },
+  { id: 'lv-001', employeeId: 'EMP-102', employeeName: 'Alex Morgan', employeeAvatar: USERS[2].avatar, employeeDepartment: 'Engineering', leaveType: 'Paid', startDate: '2026-08-28', endDate: '2026-08-30', daysCount: 3, reason: 'Tech Summit in Austin.', status: 'Pending', appliedOn: '2026-08-20' },
+  { id: 'lv-002', employeeId: 'EMP-103', employeeName: 'Sarah Jenkins', employeeAvatar: USERS[3].avatar, employeeDepartment: 'Design', leaveType: 'Paid', startDate: '2026-08-22', endDate: '2026-08-24', daysCount: 3, reason: 'Family vacation.', status: 'Approved', appliedOn: '2026-08-15', adminComments: 'Approved! Have a great trip.', reviewedBy: 'Elena Rostova', reviewedOn: '2026-08-16' },
+  { id: 'lv-003', employeeId: 'EMP-104', employeeName: 'David Chen', employeeAvatar: USERS[4].avatar, employeeDepartment: 'Finance', leaveType: 'Sick', startDate: '2026-08-10', endDate: '2026-08-11', daysCount: 2, reason: 'Flu and medical rest.', status: 'Approved', appliedOn: '2026-08-10', adminComments: 'Get well soon!', reviewedBy: 'Elena Rostova', reviewedOn: '2026-08-10' },
+  { id: 'lv-004', employeeId: 'EMP-104', employeeName: 'David Chen', employeeAvatar: USERS[4].avatar, employeeDepartment: 'Finance', leaveType: 'Casual', startDate: '2026-09-05', endDate: '2026-09-08', daysCount: 4, reason: 'Apartment relocation.', status: 'Pending', appliedOn: '2026-08-21' },
   { id: 'lv-005', employeeId: 'EMP-106', employeeName: 'R.Uday kumar reddy', employeeAvatar: USERS[5].avatar, employeeDepartment: 'Engineering', leaveType: 'Sick', startDate: '2026-08-26', endDate: '2026-08-27', daysCount: 2, reason: 'health problem', status: 'Cancelled', appliedOn: '2026-08-22' },
 ];
 
 const WFH = [
-  { id: 'wfh-001', employeeId: 'EMP-102', employeeName: 'Alex Morgan', employeeAvatar: USERS[1].avatar, department: 'Engineering', date: TODAY, reason: 'Internet upgrade at office building.', status: 'Approved', appliedOn: '2026-08-21', reviewedBy: 'Elena Rostova' },
+  { id: 'wfh-001', employeeId: 'EMP-102', employeeName: 'Alex Morgan', employeeAvatar: USERS[2].avatar, department: 'Engineering', date: TODAY, reason: 'Internet upgrade at office building.', status: 'Approved', appliedOn: '2026-08-21', reviewedBy: 'Elena Rostova' },
   { id: 'wfh-002', employeeId: 'EMP-105', employeeName: 'Priya Patel', employeeAvatar: USERS[4].avatar, department: 'Marketing', date: '2026-08-25', reason: 'Personal errand in morning.', status: 'Pending', appliedOn: '2026-08-22' },
 ];
 
@@ -136,7 +180,7 @@ const PAYROLL = USERS.map((u, i) => {
     basic: s.basic, hra: s.hra, conveyance: s.conveyance, specialAllowance: s.specialAllowance, medicalAllowance: s.medicalAllowance,
     grossPay, pfDeduction: s.pfDeduction, taxDeduction: s.taxDeduction, professionalTax: s.professionalTax,
     totalDeductions, netPay: u.salary.netSalary, paymentStatus: 'Paid', paymentDate: '2026-08-01',
-    workingDays: 26, presentDays: [24, 22, 23, 20, 24, 25][i],
+    workingDays: 26, presentDays: [25, 24, 22, 23, 20, 24, 25, 25, 25][i] || 24,
   };
 });
 
@@ -147,9 +191,9 @@ const ANNOUNCEMENTS = [
 ];
 
 const TICKETS = [
-  { id: 'tkt-001', employeeId: 'EMP-102', employeeName: 'Alex Morgan', employeeAvatar: USERS[1].avatar, department: 'Engineering', category: 'IT Request', subject: 'Laptop RAM Upgrade Request', description: 'My laptop has 8GB RAM insufficient for Docker + IDE. Requesting upgrade to 32GB.', status: 'In Progress', priority: 'High', createdOn: '2026-08-18', updatedOn: '2026-08-19', adminResponse: 'IT team has ordered the upgrade. ETA: 3-5 business days.', respondedBy: 'Elena Rostova' },
-  { id: 'tkt-002', employeeId: 'EMP-104', employeeName: 'David Chen', employeeAvatar: USERS[3].avatar, department: 'Finance', category: 'Salary Query', subject: 'July Payslip Discrepancy', description: 'My July payslip shows different conveyance allowance than my offer letter.', status: 'Resolved', priority: 'Medium', createdOn: '2026-08-10', updatedOn: '2026-08-12', resolvedOn: '2026-08-12', adminResponse: 'Corrected — one-time transport deduction during July offsite.', respondedBy: 'Elena Rostova' },
-  { id: 'tkt-003', employeeId: 'EMP-105', employeeName: 'Priya Patel', employeeAvatar: USERS[4].avatar, department: 'Marketing', category: 'Policy Clarification', subject: 'WFH Policy for Client Visits', description: 'Can I mark attendance as WFH on days I visit clients in a different city?', status: 'Open', priority: 'Low', createdOn: '2026-08-22', updatedOn: '2026-08-22' },
+  { id: 'tkt-001', employeeId: 'EMP-102', employeeName: 'Alex Morgan', employeeAvatar: USERS[2].avatar, department: 'Engineering', category: 'IT Request', subject: 'Laptop RAM Upgrade Request', description: 'My laptop has 8GB RAM insufficient for Docker + IDE. Requesting upgrade to 32GB.', status: 'In Progress', priority: 'High', createdOn: '2026-08-18', updatedOn: '2026-08-19', adminResponse: 'IT team has ordered the upgrade. ETA: 3-5 business days.', respondedBy: 'Elena Rostova' },
+  { id: 'tkt-002', employeeId: 'EMP-104', employeeName: 'David Chen', employeeAvatar: USERS[4].avatar, department: 'Finance', category: 'Salary Query', subject: 'July Payslip Discrepancy', description: 'My July payslip shows different conveyance allowance than my offer letter.', status: 'Resolved', priority: 'Medium', createdOn: '2026-08-10', updatedOn: '2026-08-12', resolvedOn: '2026-08-12', adminResponse: 'Corrected — one-time transport deduction during July offsite.', respondedBy: 'Elena Rostova' },
+  { id: 'tkt-003', employeeId: 'EMP-105', employeeName: 'Priya Patel', employeeAvatar: USERS[5].avatar, department: 'Marketing', category: 'Policy Clarification', subject: 'WFH Policy for Client Visits', description: 'Can I mark attendance as WFH on days I visit clients in a different city?', status: 'Open', priority: 'Low', createdOn: '2026-08-22', updatedOn: '2026-08-22' },
 ];
 
 const COMPLIANCE = [
@@ -160,26 +204,12 @@ const COMPLIANCE = [
 ];
 
 export function seedAll() {
-  if (!isSeeded('users')) {
-    writeDB('users', USERS);
-    console.log('✅ Seeded users database');
-  } else {
-    // Merge users to ensure R.Uday kumar reddy and all users exist in DB
-    const existing = readDB<any>('users');
-    const updated = [...existing];
-    for (const seedUser of USERS) {
-      const idx = updated.findIndex((u: any) => u.id === seedUser.id || u.employeeId === seedUser.employeeId || u.email.toLowerCase() === seedUser.email.toLowerCase());
-      if (idx === -1) {
-        updated.push(seedUser);
-      } else {
-        updated[idx] = { ...updated[idx], password: seedUser.password };
-      }
-    }
-    writeDB('users', updated);
-    console.log('✅ Synchronized all employee profiles in database');
+  // Only seed if users.json does not exist or is uninitialized!
+  if (isSeeded('users')) {
+    console.log('📦 Database files exist. Preserving dynamic user database without re-seeding.');
+    return;
   }
 
-  // Force re-sync DB files with full set
   writeDB('users', USERS);
   writeDB('departments', DEPARTMENTS);
   writeDB('attendance', ATTENDANCE);
@@ -189,6 +219,5 @@ export function seedAll() {
   writeDB('announcements', ANNOUNCEMENTS);
   writeDB('tickets', TICKETS);
   writeDB('compliance', COMPLIANCE);
-
-  console.log('🗄️  Database ready at backend/src/data/');
+  console.log('✅ Initial database seed completed.');
 }

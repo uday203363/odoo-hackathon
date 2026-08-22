@@ -4,7 +4,8 @@ import { DemoBar, Navbar } from './ui/layout/Navbar';
 import { Sidebar } from './ui/layout/Sidebar';
 import { ToastContainer } from './ui/components/common';
 import { LoginPage } from './modules/auth/LoginPage';
-import { AdminDashboard } from './modules/admin/AdminDashboard';
+import { SuperAdminDashboard } from './modules/admin/SuperAdminDashboard';
+import { HRDashboard } from './modules/admin/HRDashboard';
 import { EmployeeDashboard } from './modules/employee/EmployeeDashboard';
 import { EmployeeManagement } from './modules/admin/EmployeeManagement';
 import { DepartmentManager } from './modules/admin/DepartmentManager';
@@ -21,7 +22,6 @@ import './styles/globals.css';
 
 const AppContent: React.FC = () => {
   const { currentUser, activeTab, isAuthenticated, logout } = useApp();
-  const isAdmin = currentUser?.role === 'admin';
 
   if (!isAuthenticated || !currentUser) {
     return (
@@ -32,22 +32,32 @@ const AppContent: React.FC = () => {
     );
   }
 
+  const isSuperAdmin = currentUser.role === 'super_admin';
+  const isHR = currentUser.role === 'admin' || currentUser.role === 'hr';
+  const isAdminOrHR = isSuperAdmin || isHR;
+
+  const renderDashboard = () => {
+    if (isSuperAdmin) return <SuperAdminDashboard />;
+    if (isHR) return <HRDashboard />;
+    return <EmployeeDashboard />;
+  };
+
   const renderPage = () => {
     switch (activeTab) {
-      case 'dashboard':     return isAdmin ? <AdminDashboard /> : <EmployeeDashboard />;
-      case 'employees':     return isAdmin ? <EmployeeManagement /> : null;
-      case 'departments':   return isAdmin ? <DepartmentManager /> : null;
+      case 'dashboard':     return renderDashboard();
+      case 'employees':     return isAdminOrHR ? <EmployeeManagement /> : null;
+      case 'departments':   return isAdminOrHR ? <DepartmentManager /> : null;
       case 'attendance':    return <AttendanceManager />;
       case 'leaves':        return <LeaveWFHManager />;
       case 'payroll':       return <PayrollManager />;
-      case 'compliance':    return isAdmin ? <ComplianceCenter /> : null;
+      case 'compliance':    return isAdminOrHR ? <ComplianceCenter /> : null;
       case 'goals':         return <GoalsPerformance />;
       case 'announcements': return <AnnouncementsManager />;
       case 'tickets':       return <HelpDesk />;
-      case 'analytics':     return isAdmin ? <HRAnalytics /> : null;
+      case 'analytics':     return isAdminOrHR ? <HRAnalytics /> : null;
       case 'team':          return <TeamDirectory />;
       case 'profile':       return <EmployeeManagement />;
-      default:              return isAdmin ? <AdminDashboard /> : <EmployeeDashboard />;
+      default:              return renderDashboard();
     }
   };
 

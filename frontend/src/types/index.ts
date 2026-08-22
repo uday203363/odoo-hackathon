@@ -2,7 +2,7 @@
 // Dayflow HRMS — Full TypeScript Type Definitions
 // ============================================================
 
-export type UserRole = 'admin' | 'employee';
+export type UserRole = 'super_admin' | 'hr' | 'admin' | 'employee';
 export type AttendanceStatus = 'Present' | 'Absent' | 'Half-day' | 'Leave' | 'Late' | 'WFH';
 export type LeaveType = 'Paid' | 'Sick' | 'Unpaid' | 'Casual' | 'Maternity' | 'Paternity';
 export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';

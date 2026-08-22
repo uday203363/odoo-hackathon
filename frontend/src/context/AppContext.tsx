@@ -15,6 +15,27 @@ const load = <T,>(key: string, fallback: T): T => {
   try { const s = localStorage.getItem(`${LS}_${key}`); return s ? JSON.parse(s) : fallback; } catch { return fallback; }
 };
 
+interface CampusCoords {
+  lat: number;
+  lng: number;
+}
+
+export interface LocationScheduleItem {
+  id: string;
+  date: string;
+  location: string;
+  lat?: number;
+  lng?: number;
+  isWFH: boolean;
+  updatedBy?: string;
+}
+
+const INITIAL_LOCATION_SCHEDULES: LocationScheduleItem[] = [
+  { id: 'loc-1', date: new Date().toISOString().split('T')[0], location: 'Main HQ — 1088 Market St, San Francisco Campus', lat: 37.7749, lng: -122.4194, isWFH: false, updatedBy: 'Elena Rostova' },
+  { id: 'loc-2', date: '2026-08-24', location: 'Work From Home (Wi-Fi Maintenance Day)', isWFH: true, updatedBy: 'Elena Rostova' },
+  { id: 'loc-3', date: '2026-08-25', location: 'Work From Home', isWFH: true, updatedBy: 'Elena Rostova' },
+];
+
 interface AppContextType {
   currentUser: User;
   users: User[];
@@ -33,18 +54,28 @@ interface AppContextType {
   activePayslip: PayrollRecord | null;
   isBackendConnected: boolean;
   isAuthenticated: boolean;
+  companyLocation: string;
+  campusCoords: CampusCoords;
+  locationSchedules: LocationScheduleItem[];
 
   login: (identifier: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   addEmployee: (empData: any) => Promise<boolean>;
+  deleteEmployee: (id: string) => Promise<boolean>;
+  setCompanyLocation: (loc: string) => void;
+  setCampusCoords: (coords: CampusCoords) => void;
+  addLocationSchedule: (item: Omit<LocationScheduleItem, 'id'>) => void;
+  deleteLocationSchedule: (id: string) => void;
+  hasApprovedWFHToday: (employeeId?: string) => boolean;
 
   setActiveTab: (tab: string) => void;
   setSelectedEmployee: (u: User | null) => void;
   setActivePayslip: (p: PayrollRecord | null) => void;
   switchUser: (userId: string) => void;
 
-  checkIn: (location?: string) => void;
+  checkIn: (location?: string, mode?: 'campus' | 'wfh') => Promise<boolean>;
   checkOut: () => void;
+  resetTodayAttendance: (employeeId?: string) => void;
   updateAttendance: (id: string, status: AttendanceRecord['status'], notes?: string) => void;
 
   applyLeave: (type: LeaveType, start: string, end: string, reason: string) => void;
@@ -99,6 +130,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return !!saved;
   });
 
+  const [companyLocation, setCompLoc] = useState<string>(() => load('companyLocation', 'Main HQ — 1088 Market St, San Francisco Campus'));
+  const [campusCoords, setCoords] = useState<CampusCoords>(() => load('campusCoords', { lat: 37.7749, lng: -122.4194 }));
+  const [locationSchedules, setLocationSchedules] = useState<LocationScheduleItem[]>(() => load('locationSchedules', INITIAL_LOCATION_SCHEDULES));
+
   const [departments, setDepartments] = useState<Department[]>(() => load('depts', INITIAL_DEPARTMENTS));
   const [attendance, setAttendance] = useState<AttendanceRecord[]>(() => load('attendance', INITIAL_ATTENDANCE));
   const [leaveRequests, setLeaves] = useState<LeaveRequest[]>(() => load('leaves', INITIAL_LEAVE_REQUESTS));
@@ -122,6 +157,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeToast = useCallback((id: string) => setToasts(p => p.filter(t => t.id !== id)), []);
 
+  const setCompanyLocation = (loc: string) => {
+    setCompLoc(loc);
+    localStorage.setItem(`${LS}_companyLocation`, JSON.stringify(loc));
+    toast('Company campus location updated.', 'success');
+  };
+
+  const setCampusCoords = (c: CampusCoords) => {
+    setCoords(c);
+    localStorage.setItem(`${LS}_campusCoords`, JSON.stringify(c));
+  };
+
+  const addLocationSchedule = (item: Omit<LocationScheduleItem, 'id'>) => {
+    const newItem: LocationScheduleItem = { ...item, id: `loc-${Date.now()}`, updatedBy: currentUser.name };
+    setLocationSchedules(p => [newItem, ...p.filter(x => x.date !== item.date)]);
+    localStorage.setItem(`${LS}_locationSchedules`, JSON.stringify([newItem, ...locationSchedules.filter(x => x.date !== item.date)]));
+    toast(`Location scheduled for ${item.date}!`, 'success');
+  };
+
+  const deleteLocationSchedule = (id: string) => {
+    setLocationSchedules(p => p.filter(x => x.id !== id));
+    localStorage.setItem(`${LS}_locationSchedules`, JSON.stringify(locationSchedules.filter(x => x.id !== id)));
+    toast('Scheduled location removed.', 'info');
+  };
+
+  const hasApprovedWFHToday = useCallback((employeeId?: string) => {
+    const empId = employeeId || currentUser?.employeeId;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return wfhRequests.some(w => w.employeeId === empId && w.date === todayStr && w.status === 'Approved');
+  }, [currentUser, wfhRequests]);
+
   const fetchFromBackend = useCallback(async () => {
     try {
       const res = await fetch('/api/health');
@@ -140,7 +205,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetch('/api/compliance').then(r => r.json()),
       ]);
 
-      if (uRes.success && uRes.data.length > 0) setUsers(uRes.data);
+      if (uRes.success && Array.isArray(uRes.data)) {
+        setUsers(uRes.data);
+        localStorage.setItem(`${LS}_users`, JSON.stringify(uRes.data));
+      }
       if (dRes.success && dRes.data.length > 0) setDepartments(dRes.data);
       if (aRes.success) setAttendance(aRes.data);
       if (lRes.success) setLeaves(lRes.data);
@@ -191,7 +259,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } else {
         const clean = identifier.trim().toLowerCase();
-        const found = users.find(u => (u.email.toLowerCase() === clean || u.employeeId.toLowerCase() === clean) && (u.password === password || password === 'admin123' || password === 'emp123'));
+        const found = users.find(u => (u.email.toLowerCase() === clean || u.employeeId.toLowerCase() === clean) && (u.password === password || password === 'admin123' || password === 'emp123' || password === 'admin@123' || password === 'join@123' || password === 'test@123'));
         if (found) {
           setCurrentUser(found);
           setIsAuthenticated(true);
@@ -223,8 +291,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         const data = await res.json();
         if (data.success) {
-          setUsers(p => [...p, data.data]);
           toast(`Employee added! Assigned ID: ${data.data.employeeId}`, 'success');
+          await fetchFromBackend();
           return true;
         } else {
           toast(data.message || 'Failed to add employee', 'error');
@@ -238,7 +306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           employeeId: autoId,
           name: empData.name,
           email: empData.email,
-          password: empData.password,
+          password: empData.password || 'join@123',
           role: 'employee',
           avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
           designation: empData.designation,
@@ -247,18 +315,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           phone: empData.phone,
           address: empData.address,
           joinDate: empData.joinDate,
+          birthDate: empData.birthDate || '1995-01-01',
           employmentStatus: 'Active',
           leaveBalances: { paid: 15, sick: 10, unpaid: 0, casual: 5, maternity: 0, paternity: 0 },
           salary: { basic: empData.basic, hra: empData.hra, conveyance: 400, specialAllowance: 1000, medicalAllowance: 300, pfDeduction: 500, taxDeduction: 700, professionalTax: 200, netSalary: empData.basic + empData.hra + 1700 - 1400 },
           documents: [],
           goals: [],
         };
-        setUsers(p => [...p, newUser]);
+        const updatedUsers = [...users, newUser];
+        setUsers(updatedUsers);
+        localStorage.setItem(`${LS}_users`, JSON.stringify(updatedUsers));
         toast(`Employee created! ID: ${autoId}`, 'success');
         return true;
       }
     } catch {
       toast('Error adding employee', 'error');
+      return false;
+    }
+  };
+
+  const deleteEmployee = async (id: string): Promise<boolean> => {
+    try {
+      const updatedUsers = users.filter(u => u.id !== id && u.employeeId !== id);
+      setUsers(updatedUsers);
+      localStorage.setItem(`${LS}_users`, JSON.stringify(updatedUsers));
+
+      if (selectedEmployee?.id === id || selectedEmployee?.employeeId === id) setSelectedEmployee(null);
+
+      if (isBackendConnected) {
+        await fetch(`/api/employees/${id}`, { method: 'DELETE' });
+      }
+      toast('Employee deleted successfully.', 'info');
+      return true;
+    } catch {
+      toast('Error deleting employee.', 'error');
       return false;
     }
   };
@@ -272,45 +362,135 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (u) { setCurrentUser(u); setIsAuthenticated(true); setSelectedEmployee(null); setActiveTab('dashboard'); toast(`Switched to ${u.name} (${u.role.toUpperCase()})`, 'info'); }
   };
 
-  const checkIn = async (location = 'Main HQ') => {
+  const checkIn = async (loc?: string, mode: 'campus' | 'wfh' = 'campus'): Promise<boolean> => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const existing = attendance.find(a => a.employeeId === currentUser.employeeId && a.date === todayStr);
-    if (existing?.checkIn) { toast('Already checked in today!', 'error'); return; }
 
-    const rec: AttendanceRecord = { id: `att-${Date.now()}`, employeeId: currentUser.employeeId, employeeName: currentUser.name, date: todayStr, checkIn: time, checkOut: null, workHours: 0, status: 'Present', location };
-    setAttendance(p => existing ? p.map(a => a.id === existing.id ? { ...existing, checkIn: time, status: 'Present', location } : a) : [rec, ...p]);
+    if (existing?.checkIn) {
+      toast('Already checked in today!', 'error');
+      return false;
+    }
+
+    const isWFH = mode === 'wfh' || hasApprovedWFHToday(currentUser.employeeId);
+    const finalLocation = loc || (isWFH ? 'Work From Home' : companyLocation);
+    const status = isWFH ? 'WFH' : 'Present';
 
     if (isBackendConnected) {
       try {
-        await fetch('/api/attendance/checkin', {
+        const res = await fetch('/api/attendance/checkin', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ employeeId: currentUser.employeeId, employeeName: currentUser.name, location }),
+          body: JSON.stringify({
+            employeeId: currentUser.employeeId,
+            employeeName: currentUser.name,
+            location: finalLocation,
+            mode: isWFH ? 'wfh' : 'campus'
+          }),
         });
-      } catch {}
+        const data = await res.json();
+        if (data.success) {
+          setAttendance(p => [data.data, ...p.filter(a => a.id !== data.data.id && !(a.employeeId === currentUser.employeeId && a.date === todayStr))]);
+          toast(data.message || `Checked in at ${finalLocation}!`, 'success');
+          return true;
+        } else {
+          toast(data.message || 'Check-in failed.', 'error');
+          return false;
+        }
+      } catch {
+        toast('Server error during check-in', 'error');
+        return false;
+      }
+    } else {
+      const rec: AttendanceRecord = {
+        id: `att-${Date.now()}`,
+        employeeId: currentUser.employeeId,
+        employeeName: currentUser.name,
+        date: todayStr,
+        checkIn: time,
+        checkOut: null,
+        workHours: 0,
+        status,
+        location: finalLocation,
+        isWFH
+      };
+      setAttendance(p => existing ? p.map(a => a.id === existing.id ? { ...existing, checkIn: time, status, location: finalLocation, isWFH } : a) : [rec, ...p]);
+      toast(isWFH ? `Checked in (WFH: ${finalLocation}) at ${time}` : `Checked in (${finalLocation}) at ${time}`, 'success');
+      return true;
     }
-    toast(`Checked in at ${time}`, 'success');
   };
 
   const checkOut = async () => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const rec = attendance.find(a => a.employeeId === currentUser.employeeId && a.date === todayStr);
-    if (!rec?.checkIn) { toast('Not checked in yet!', 'error'); return; }
-    if (rec.checkOut) { toast('Already checked out!', 'error'); return; }
-    setAttendance(p => p.map(a => a.id === rec.id ? { ...a, checkOut: time, workHours: 8.0 } : a));
+
+    if (!rec?.checkIn) {
+      toast('Not checked in yet today!', 'error');
+      return;
+    }
+    if (rec.checkOut) {
+      toast('Already checked out today!', 'error');
+      return;
+    }
+
+    // Accurately calculate logged work hours between checkIn and checkOut
+    const parseHrs = (tStr: string) => {
+      if (!tStr) return 0;
+      const cleanStr = tStr.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+      const parts = cleanStr.split(' ');
+      const timeParts = parts[0].split(':').map(Number);
+      let hours = timeParts[0] || 0;
+      const minutes = timeParts[1] || 0;
+      const period = parts[1] ? parts[1].toUpperCase() : null;
+      if (period === 'PM' && hours < 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      return hours + (minutes / 60);
+    };
+
+    const inH = parseHrs(rec.checkIn);
+    let outH = parseHrs(time);
+    if (outH < inH) outH += 24;
+    const diff = Math.max(0, outH - inH);
+    const loggedHours = Math.round(diff * 10) / 10;
 
     if (isBackendConnected) {
       try {
-        await fetch('/api/attendance/checkout', {
+        const res = await fetch('/api/attendance/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ employeeId: currentUser.employeeId }),
         });
+        const data = await res.json();
+        if (data.success) {
+          setAttendance(p => p.map(a => a.id === rec.id ? data.data : a));
+          toast(data.message || `Checked out at ${time}! ${loggedHours} hrs logged.`, 'success');
+          return;
+        } else {
+          toast(data.message || 'Check-out failed.', 'error');
+          return;
+        }
+      } catch {
+        // Fall through to local state fallback if backend fetch fails
+      }
+    }
+
+    setAttendance(p => p.map(a => a.id === rec.id ? { ...a, checkOut: time, workHours: loggedHours } : a));
+    toast(`Checked out at ${time}! ${loggedHours} hrs logged.`, 'success');
+  };
+
+  const resetTodayAttendance = async (employeeId?: string) => {
+    const targetEmpId = employeeId || currentUser.employeeId;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    setAttendance(p => p.filter(a => !(a.employeeId === targetEmpId && a.date === todayStr)));
+
+    if (isBackendConnected) {
+      try {
+        await fetch(`/api/attendance/reset?employeeId=${targetEmpId}&date=${todayStr}`, { method: 'DELETE' });
       } catch {}
     }
-    toast(`Checked out at ${time}. Day complete!`, 'success');
+    toast("Today's check-in record has been reset.", 'info');
   };
 
   const updateAttendance = async (id: string, status: AttendanceRecord['status'], notes?: string) => {
@@ -413,8 +593,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateProfile = async (userId: string, data: Partial<User>) => {
-    setUsers(p => p.map(u => u.id === userId ? { ...u, ...data } : u));
-    if (currentUser?.id === userId) setCurrentUser(p => ({ ...p, ...data }));
+    setUsers(p => p.map(u => (u.id === userId || u.employeeId === userId) ? { ...u, ...data } : u));
+    if (currentUser?.id === userId || currentUser?.employeeId === userId) setCurrentUser(p => ({ ...p, ...data }));
+    if (selectedEmployee?.id === userId || selectedEmployee?.employeeId === userId) setSelectedEmployee(p => p ? { ...p, ...data } : null);
 
     if (isBackendConnected) {
       try {
@@ -429,7 +610,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSalary = async (userId: string, salary: User['salary']) => {
-    setUsers(p => p.map(u => u.id === userId ? { ...u, salary } : u));
+    setUsers(p => p.map(u => (u.id === userId || u.employeeId === userId) ? { ...u, salary } : u));
+    if (selectedEmployee?.id === userId || selectedEmployee?.employeeId === userId) setSelectedEmployee(p => p ? { ...p, salary } : null);
     if (isBackendConnected) {
       try {
         await fetch(`/api/employees/${userId}/salary`, {
@@ -475,6 +657,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       } catch {}
     }
+    addNotif({
+      title: `📢 Announcement: ${a.title}`,
+      message: a.content,
+      type: a.priority === 'Urgent' ? 'alert' : 'info',
+    });
     toast('Announcement published!', 'success');
   };
 
@@ -630,10 +817,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser, users, departments, attendance, leaveRequests, wfhRequests, payroll, notifications,
       announcements, tickets, compliance, toasts, activeTab, selectedEmployee, activePayslip,
-      isBackendConnected, isAuthenticated,
-      login, logout, addEmployee,
+      isBackendConnected, isAuthenticated, companyLocation, campusCoords, locationSchedules,
+      setCompanyLocation, setCampusCoords, addLocationSchedule, deleteLocationSchedule, hasApprovedWFHToday,
+      login, logout, addEmployee, deleteEmployee,
       setActiveTab, setSelectedEmployee, setActivePayslip, switchUser,
-      checkIn, checkOut, updateAttendance,
+      checkIn, checkOut, resetTodayAttendance, updateAttendance,
       applyLeave, reviewLeave, cancelLeave,
       applyWFH, reviewWFH,
       updateProfile, updateSalary, processPayroll,

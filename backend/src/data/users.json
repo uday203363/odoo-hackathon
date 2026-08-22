@@ -1,5 +1,51 @@
 [
   {
+    "id": "usr-superadmin",
+    "employeeId": "EMP-00",
+    "name": "Super Admin",
+    "email": "superadmin@dayflow.com",
+    "password": "admin@123",
+    "role": "super_admin",
+    "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    "designation": "Chief Technology & Systems Officer",
+    "departmentId": "dept-1",
+    "departmentName": "People & Culture",
+    "phone": "+1 (555) 000-1111",
+    "address": "Global Headquarters, San Francisco, CA",
+    "joinDate": "2019-01-01",
+    "birthDate": "1980-01-01",
+    "managerName": "Board of Directors",
+    "bio": "Super Admin overseeing global HRMS systems, organizational structure, security & compliance.",
+    "employmentStatus": "Active",
+    "skills": [
+      "System Architecture",
+      "Global HR",
+      "Security",
+      "Compliance"
+    ],
+    "leaveBalances": {
+      "paid": 30,
+      "sick": 15,
+      "unpaid": 0,
+      "casual": 10,
+      "maternity": 0,
+      "paternity": 0
+    },
+    "salary": {
+      "basic": 10000,
+      "hra": 4000,
+      "conveyance": 800,
+      "specialAllowance": 3000,
+      "medicalAllowance": 800,
+      "pfDeduction": 1200,
+      "taxDeduction": 2000,
+      "professionalTax": 200,
+      "netSalary": 15200
+    },
+    "documents": [],
+    "goals": []
+  },
+  {
     "id": "usr-admin-1",
     "employeeId": "EMP-001",
     "name": "Elena Rostova",
@@ -193,7 +239,7 @@
     "managerId": "EMP-001",
     "managerName": "Elena Rostova",
     "bio": "Data-driven analyst specializing in corporate forecasting and financial reporting.",
-    "employmentStatus": "Active",
+    "employmentStatus": "Probation",
     "probationEndDate": "2024-07-15",
     "skills": [
       "Excel",
@@ -331,20 +377,29 @@
     "goals": []
   },
   {
-    "id": "usr-c54fcbaa",
+    "id": "usr-emp-6",
     "employeeId": "EMP-107",
     "name": "sagar",
     "email": "test@example.com",
     "password": "join@123",
-    "role": "employee",
-    "avatar": "https://images.unsplash.com/photo-1535713875602?w=150&auto=format&fit=crop&q=80",
+    "role": "admin",
+    "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80",
     "designation": "Software Engineer",
-    "departmentId": "dept-3",
-    "departmentName": "Design",
-    "phone": "+1 (555) 123-4567",
+    "departmentId": "dept-1",
+    "departmentName": "People & Culture",
+    "phone": "+1 (555) 555-0107",
     "address": "San Francisco, CA",
-    "joinDate": "2026-08-22",
+    "joinDate": "2024-03-01",
+    "birthDate": "1997-06-20",
+    "managerId": "EMP-001",
+    "managerName": "Elena Rostova",
+    "bio": "Software engineer focused on application testing and frontend systems.",
     "employmentStatus": "Active",
+    "skills": [
+      "React",
+      "TypeScript",
+      "Node.js"
+    ],
     "leaveBalances": {
       "paid": 15,
       "sick": 10,
@@ -354,13 +409,13 @@
       "paternity": 0
     },
     "salary": {
-      "basic": 45000,
-      "hra": 1800,
+      "basic": 24000,
+      "hra": 9600,
       "conveyance": 400,
-      "specialAllowance": 1000,
-      "medicalAllowance": 300,
-      "pfDeduction": 5400,
-      "taxDeduction": 4850,
+      "specialAllowance": 5000,
+      "medicalAllowance": 500,
+      "pfDeduction": 750,
+      "taxDeduction": 500,
       "professionalTax": 200,
       "netSalary": 38050
     },

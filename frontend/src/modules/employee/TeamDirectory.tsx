@@ -4,7 +4,7 @@ import { getBadgeClass, EmptyState } from '../../ui/components/common';
 import { Search, Mail, Phone, MapPin, Calendar } from 'lucide-react';
 
 export const TeamDirectory: React.FC = () => {
-  const { users, attendance } = useApp();
+  const { users, attendance, currentUser } = useApp();
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
 
@@ -47,11 +47,14 @@ export const TeamDirectory: React.FC = () => {
             {filtered.map(u => {
               const rec = todayAtt.find(a => a.employeeId === u.employeeId);
               const isPresent = rec && ['Present', 'WFH', 'Late'].includes(rec.status);
+              const isSelf = u.id === currentUser.id;
               return (
-                <div key={u.id} className="team-card">
+                <div key={u.id} className="team-card" style={isSelf ? { border: '2px solid var(--primary)' } : undefined}>
                   <div className="team-card-top">
                     <img src={u.avatar} alt={u.name} />
-                    <div className="name">{u.name}</div>
+                    <div className="name">
+                      {u.name} {isSelf && <span style={{ fontSize: '.72rem', color: 'var(--primary)', background: 'var(--primary-light)', padding: '1px 6px', borderRadius: 99, fontWeight: 800, marginLeft: 4 }}>(You)</span>}
+                    </div>
                     <div className="role">{u.designation}</div>
                   </div>
                   <div className="team-card-body">

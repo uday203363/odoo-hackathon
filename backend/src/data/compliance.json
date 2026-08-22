@@ -5,7 +5,7 @@
     "employeeName": "Sarah Jenkins",
     "type": "Contract Renewal",
     "dueDate": "2025-11-10",
-    "status": "Overdue",
+    "status": "Done",
     "notes": "Contract expired — renewal pending HR review"
   },
   {
@@ -14,7 +14,7 @@
     "employeeName": "Priya Patel",
     "type": "Contract Renewal",
     "dueDate": "2025-04-20",
-    "status": "Overdue",
+    "status": "Done",
     "notes": "Month-to-month basis until renewal finalized"
   },
   {
@@ -32,7 +32,7 @@
     "employeeName": "David Chen",
     "type": "Policy Acknowledgement",
     "dueDate": "2026-08-30",
-    "status": "Pending",
+    "status": "Done",
     "notes": "Code of Conduct (2026 edition) awaiting signature"
   }
 ]

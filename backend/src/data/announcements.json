@@ -1,5 +1,18 @@
 [
   {
+    "title": " Monthly Attendance Reminder",
+    "content": " Please ensure that your attendance and check-in/check-out records are updated correctly before the end of the month.",
+    "priority": "Info",
+    "expiresOn": "",
+    "postedBy": "Elena Rostova",
+    "id": "ann-0def0806-4847-4d74-be93-5ae626148c9e",
+    "postedOn": "2026-08-22",
+    "readBy": [
+      "EMP-102",
+      "EMP-00"
+    ]
+  },
+  {
     "id": "ann-1",
     "title": "Q3 All-Hands Meeting — September 5th",
     "content": "Join us for our quarterly all-hands meeting at 2 PM PST. Agenda: OKR review, product roadmap, and employee recognition.",
@@ -19,7 +32,9 @@
     "priority": "Urgent",
     "postedBy": "Elena Rostova",
     "postedOn": "2026-08-21",
-    "readBy": [],
+    "readBy": [
+      "EMP-102"
+    ],
     "expiresOn": "2026-08-24"
   },
   {
