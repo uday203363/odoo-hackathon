@@ -246,16 +246,25 @@ img { display: block; }
 }
 .cal-day:hover { background: var(--primary-light); color: var(--primary); }
 .cal-day.today {
-  border-color: var(--primary); font-weight: 800; color: var(--primary); background: var(--primary-light);
+  border: 2px solid var(--primary) !important; font-weight: 800; color: var(--primary);
+}
+.cal-day.today.has-event {
+  color: var(--accent);
+}
+.cal-day.today.leave {
+  color: var(--purple);
 }
 .cal-day.has-event {
-  background: var(--accent-light); color: var(--accent); font-weight: 700; border-color: rgba(0,160,157,.3);
+  background: var(--accent-light); color: var(--accent); font-weight: 700; border: 1px solid rgba(0,160,157,.3);
 }
 .cal-day.leave {
-  background: var(--purple-bg); color: var(--purple); font-weight: 700; border-color: rgba(139,92,246,.3);
+  background: var(--purple-bg); color: var(--purple); font-weight: 700; border: 1px solid rgba(139,92,246,.3);
 }
 .cal-day.absent {
-  background: var(--red-bg); color: var(--red); font-weight: 700; border-color: rgba(239,68,68,.3);
+  background: var(--red-bg); color: var(--red); font-weight: 700; border: 1px solid rgba(239,68,68,.3);
+}
+.cal-day.weekend {
+  opacity: .55; background: var(--surface-2); color: var(--text-4); border-color: transparent;
 }
 
 /* ─── Compliance & Help Desk UI ─── */

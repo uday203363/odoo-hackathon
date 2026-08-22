@@ -6,51 +6,28 @@ import {
   LogIn, LogOut, Target, Megaphone, Ticket, Users, CalendarDays, ChevronLeft, ChevronRight, Home, Navigation, Crosshair, Building2, RotateCcw
 } from 'lucide-react';
 import { getCurrentGPSLocation, type GPSCoords } from '../../utils/geoUtils';
-
-function parseCheckInToDate(str: string): Date | null {
-  if (!str) return null;
-  const clean = str.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-  
-  if (clean.includes('T')) {
-    const d = new Date(clean);
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  const match = clean.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM)?$/i);
-  if (match) {
-    let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10);
-    const seconds = match[3] ? parseInt(match[3], 10) : 0;
-    const period = match[4] ? match[4].toUpperCase() : null;
-
-    if (period === 'PM' && hours < 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-
-    const d = new Date();
-    d.setHours(hours, minutes, seconds, 0);
-    return d;
-  }
-
-  return null;
-}
+import { parseCheckInToDate, formatWorkHours, getShiftMetrics } from '../../utils/timeUtils';
 
 const LiveTimer: React.FC<{ checkInTimeString: string }> = React.memo(({ checkInTimeString }) => {
   const [displayTime, setDisplayTime] = useState('00:00:00');
+  const [elapsedHours, setElapsedHours] = useState(0);
 
   useEffect(() => {
     const update = () => {
       const checkInDate = parseCheckInToDate(checkInTimeString);
       if (!checkInDate) {
         setDisplayTime('00:00:00');
+        setElapsedHours(0);
         return;
       }
 
-      const diff = Math.max(0, Math.floor((Date.now() - checkInDate.getTime()) / 1000));
-      const hrs = String(Math.floor(diff / 3600)).padStart(2, '0');
-      const mins = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-      const secs = String(diff % 60).padStart(2, '0');
+      const diffSecs = Math.max(0, Math.floor((Date.now() - checkInDate.getTime()) / 1000));
+      const hrs = String(Math.floor(diffSecs / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((diffSecs % 3600) / 60)).padStart(2, '0');
+      const secs = String(diffSecs % 60).padStart(2, '0');
       const formatted = `${hrs}:${mins}:${secs}`;
       setDisplayTime(prev => (prev !== formatted ? formatted : prev));
+      setElapsedHours(diffSecs / 3600);
     };
 
     update();
@@ -58,81 +35,105 @@ const LiveTimer: React.FC<{ checkInTimeString: string }> = React.memo(({ checkIn
     return () => clearInterval(interval);
   }, [checkInTimeString]);
 
+  const metrics = getShiftMetrics(elapsedHours, 8.0);
   const [hrs, mins, secs] = displayTime.split(':');
-  const hDigits = (hrs || '00').padStart(2, '0').split('');
-  const mDigits = (mins || '00').padStart(2, '0').split('');
-  const sDigits = (secs || '00').padStart(2, '0').split('');
 
-  const renderDigitTile = (digit: string, key: string, isAccent = false) => (
-    <span
-      key={key}
-      style={{
-        width: '32px',
-        height: '42px',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--surface)',
-        border: '1px solid var(--border-strong)',
-        borderRadius: '6px',
-        fontSize: '1.45rem',
-        fontWeight: 800,
-        fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-        fontVariantNumeric: 'tabular-nums',
-        color: isAccent ? 'var(--accent)' : 'var(--primary)',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
-        userSelect: 'none',
-        flexShrink: 0,
-        boxSizing: 'border-box',
-        lineHeight: 1,
-      }}
-    >
-      {digit}
-    </span>
+  const renderTimeUnit = (value: string, label: string, isAccent = false) => (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '54px' }}>
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--border-strong)',
+          borderRadius: '8px',
+          padding: '.35rem 0',
+          fontSize: '1.4rem',
+          fontWeight: 800,
+          fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+          fontVariantNumeric: 'tabular-nums',
+          fontFeatureSettings: '"tnum"',
+          color: isAccent ? 'var(--accent)' : 'var(--primary)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+          width: '54px',
+          textAlign: 'center',
+          letterSpacing: '0',
+          boxSizing: 'border-box',
+        }}
+      >
+        {value}
+      </div>
+      <span style={{ fontSize: '.62rem', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', marginTop: '.25rem', letterSpacing: '.5px' }}>
+        {label}
+      </span>
+    </div>
   );
 
   return (
-    <div
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '.35rem',
-        background: 'var(--surface-2)',
-        padding: '.6rem 1rem',
-        borderRadius: 'var(--r-md)',
-        border: '1px solid var(--border-strong)',
-        boxShadow: 'var(--shadow-xs)',
-        margin: '0 auto .25rem',
-        userSelect: 'none',
-        contain: 'layout paint',
-      }}
-    >
-      <span
+    <div style={{ width: '100%', height: '140px', minHeight: '140px', maxHeight: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', userSelect: 'none', overflow: 'hidden' }}>
+      {/* Live Timer Unit Box */}
+      <div
         style={{
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          background: 'var(--green)',
-          boxShadow: '0 0 0 3px var(--green-bg)',
-          marginRight: '.25rem',
-          flexShrink: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '.5rem',
+          background: 'var(--surface-2)',
+          padding: '.65rem 1.25rem',
+          borderRadius: 'var(--r-md)',
+          border: '1px solid var(--border-strong)',
+          boxShadow: 'var(--shadow-xs)',
+          margin: '0 auto .65rem',
+          width: '260px',
+          height: '62px',
+          minHeight: '62px',
+          maxHeight: '62px',
+          boxSizing: 'border-box',
         }}
-      />
+      >
+        <span
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: '50%',
+            background: 'var(--green)',
+            boxShadow: '0 0 0 4px var(--green-bg)',
+            marginRight: '.15rem',
+            flexShrink: 0,
+            alignSelf: 'center',
+            marginTop: '-12px',
+          }}
+        />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.25rem' }}>
-        {renderDigitTile(hDigits[0], 'h0')}
-        {renderDigitTile(hDigits[1], 'h1')}
+        {renderTimeUnit(hrs || '00', 'HOURS')}
+        <span style={{ color: 'var(--text-4)', fontWeight: 800, fontSize: '1.2rem', marginTop: '-12px', width: '8px', textAlign: 'center' }}>:</span>
+        {renderTimeUnit(mins || '00', 'MINS')}
+        <span style={{ color: 'var(--text-4)', fontWeight: 800, fontSize: '1.2rem', marginTop: '-12px', width: '8px', textAlign: 'center' }}>:</span>
+        {renderTimeUnit(secs || '00', 'SECS', true)}
+      </div>
 
-        <span style={{ color: 'var(--text-4)', fontWeight: 800, fontSize: '1.2rem', padding: '0 2px', userSelect: 'none', lineHeight: 1 }}>:</span>
-
-        {renderDigitTile(mDigits[0], 'm0')}
-        {renderDigitTile(mDigits[1], 'm1')}
-
-        <span style={{ color: 'var(--text-4)', fontWeight: 800, fontSize: '1.2rem', padding: '0 2px', userSelect: 'none', lineHeight: 1 }}>:</span>
-
-        {renderDigitTile(sDigits[0], 's0', true)}
-        {renderDigitTile(sDigits[1], 's1', true)}
+      {/* Standard Daily Work Progress Bar */}
+      <div style={{ width: '100%', maxWidth: '340px', height: '54px', minHeight: '54px', maxHeight: '54px', margin: '0 auto', boxSizing: 'border-box', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.75rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '.3rem', fontVariantNumeric: 'tabular-nums' }}>
+          <span>Standard Shift Progress ({metrics.progressPercent}%)</span>
+          <span style={{ color: metrics.isOvertime ? 'var(--green)' : 'var(--primary)', fontVariantNumeric: 'tabular-nums' }}>
+            {metrics.elapsedFormatted} / 8h 00m Target
+          </span>
+        </div>
+        <div style={{ background: 'var(--surface-2)', height: 8, borderRadius: 99, overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <div
+            style={{
+              width: `${metrics.progressPercent}%`,
+              background: metrics.isOvertime ? 'var(--green)' : 'var(--primary)',
+              height: '100%',
+              borderRadius: 99,
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.71rem', color: 'var(--text-3)', marginTop: '.35rem', fontVariantNumeric: 'tabular-nums' }}>
+          <span>{metrics.statusLabel}</span>
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {metrics.isOvertime ? `Overtime: ${metrics.overtimeFormatted}` : `Remaining: ${metrics.remainingFormatted}`}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -206,13 +207,31 @@ export const EmployeeDashboard: React.FC = () => {
   const getCalDayClass = (day: number): string => {
     const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const isToday = dateStr === today;
+    const dayOfWeek = new Date(calYear, calMonth, day).getDay();
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
     const attRec = myAttendance.find(a => a.date === dateStr);
     const leaveRec = myLeaves.find(r => r.startDate <= dateStr && r.endDate >= dateStr && r.status === 'Approved');
+
     let cls = 'cal-day';
-    if (isToday) cls += ' today';
-    else if (leaveRec) cls += ' leave';
-    else if (attRec?.status === 'Absent') cls += ' absent';
-    else if (attRec) cls += ' has-event';
+
+    if (attRec) {
+      if (attRec.status === 'Absent') cls += ' absent';
+      else if (attRec.status === 'Leave') cls += ' leave';
+      else cls += ' has-event';
+    } else if (leaveRec) {
+      cls += ' leave';
+    } else if (dateStr < today) {
+      if (isWeekend) cls += ' weekend';
+      else cls += ' has-event';
+    } else if (isWeekend) {
+      cls += ' weekend';
+    }
+
+    if (isToday) {
+      cls += ' today';
+    }
+
     return cls;
   };
 
@@ -373,7 +392,7 @@ export const EmployeeDashboard: React.FC = () => {
                 {shortDateHeading}
               </span>
             </div>
-            <div className="card-flat" style={{ textAlign: 'center', padding: '1.25rem 1rem', minHeight: '210px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+            <div className="card-flat" style={{ textAlign: 'center', padding: '1.25rem 1rem', minHeight: '230px', maxHeight: '230px', height: '230px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', alignItems: 'center', overflow: 'hidden' }}>
               {todayRecord?.checkIn && !todayRecord.checkOut ? (
                 <>
                   <LiveTimer checkInTimeString={todayRecord.checkIn} />
@@ -384,7 +403,15 @@ export const EmployeeDashboard: React.FC = () => {
                 <>
                   <CheckCircle2 size={42} color="var(--green)" style={{ margin: '0 auto .5rem' }} />
                   <h4 style={{ fontWeight: 700 }}>Shift Complete!</h4>
-                  <p style={{ fontSize: '.83rem', color: 'var(--text-3)', marginTop: '.25rem' }}>In: {todayRecord.checkIn} · Out: {todayRecord.checkOut} ({todayRecord.workHours} hrs)</p>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem', background: 'var(--green-bg)', color: 'var(--green)', padding: '.25rem .75rem', borderRadius: 99, fontSize: '.76rem', fontWeight: 700, margin: '.35rem 0 .4rem' }}>
+                    <CheckCircle2 size={13} /> {todayRecord.workHours >= 8.0 ? 'Standard Shift Completed (8.0h Met)' : `Shift Completed (${formatWorkHours(todayRecord.workHours).formatted})`}
+                  </div>
+                  <p style={{ fontSize: '.83rem', color: 'var(--text-3)', marginTop: '.15rem' }}>
+                    In: <strong>{todayRecord.checkIn}</strong> · Out: <strong>{todayRecord.checkOut}</strong>
+                  </p>
+                  <p style={{ fontSize: '.83rem', fontWeight: 700, color: 'var(--primary)', marginTop: '.15rem' }}>
+                    Total Logged: {formatWorkHours(todayRecord.workHours).full}
+                  </p>
                   <button className="btn btn-outline btn-sm" style={{ marginTop: '.85rem' }} onClick={() => resetTodayAttendance()}><RotateCcw size={13} /> Re-Check In / New Shift</button>
                 </>
               ) : todayRecord?.status === 'Leave' ? (

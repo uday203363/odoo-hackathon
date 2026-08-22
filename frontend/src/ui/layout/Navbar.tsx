@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Bell, LogOut, Key, Server, Lock, LogIn, Clock } from 'lucide-react';
 import { Modal } from '../components/common';
 import type { NotificationItem } from '../../types';
+import { formatWorkHours } from '../../utils/timeUtils';
 
 interface NavbarProps { onOpenAuth: () => void; }
 
@@ -101,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAuth }) => {
               </button>
             ) : (
               <span style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--green)', background: 'var(--green-bg)', padding: '4px 10px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Clock size={12} /> Shift Complete ({userTodayRec.workHours}h)
+                <Clock size={12} /> Shift Complete ({formatWorkHours(userTodayRec.workHours).formatted})
               </span>
             )}
           </div>
